@@ -1,0 +1,7 @@
+/gen/
+
+/tsconfig.json
+/deno.lock
+
+/node_modules/
+.vscode/

@@ -1,0 +1,656 @@
+#data
+<foo bar=qux/>
+#errors
+(1,14): expected-doctype-but-got-start-tag
+(1,14): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <foo>
+|       bar="qux/"
+
+#data
+<p id="status"><noscript><strong>A</strong></noscript><span>B</span></p>
+#errors
+(1,15): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|   <body>
+|     <p>
+|       id="status"
+|       <noscript>
+|         <strong>
+|           "A"
+|       <span>
+|         "B"
+
+#data
+<div><sarcasm><div></div></sarcasm></div>
+#errors
+(1,5): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <div>
+|       <sarcasm>
+|         <div>
+
+#data
+<html><body><img src="" border="0" alt="><div>A</div></body></html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:68) eof-in-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <img>
+|       alt="><div>A</div></body></html"
+|       border="0"
+|       src=""
+
+#data
+<table><td></tbody>A
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,11): unexpected-cell-in-table-body
+(1,20): unexpected-character-implies-table-voodoo
+(1,20): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     "A"
+|     <table>
+|       <tbody>
+|         <tr>
+|           <td>
+
+#data
+<table><td></thead>A
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,11): unexpected-cell-in-table-body
+(1,19): unexpected-cell-end-tag
+(1,20): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <tbody>
+|         <tr>
+|           <td>
+|             "A"
+
+#data
+<table><td></tfoot>A
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,11): unexpected-cell-in-table-body
+(1,19): unexpected-cell-end-tag
+(1,20): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <tbody>
+|         <tr>
+|           <td>
+|             "A"
+
+#data
+<table><thead><td></tbody>A
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,18): unexpected-cell-in-table-body
+(1,26): unexpected-cell-end-tag
+(1,27): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <thead>
+|         <tr>
+|           <td>
+|             "A"
+
+#data
+<legend>test</legend>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <legend>
+|       "test"
+
+#data
+<table><input>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,14): unexpected-start-tag-implies-table-voodoo
+(1,14): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <input>
+|     <table>
+
+#data
+<b><em><foo><foo><aside></b>
+#errors
+(1,3): expected-doctype-but-got-start-tag
+(1,28): adoption-agency-1.3
+(1,28): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <b>
+|       <em>
+|         <foo>
+|           <foo>
+|     <em>
+|       <aside>
+|         <b>
+
+#data
+<b><em><foo><foo><aside></b></em>
+#errors
+(1,3): expected-doctype-but-got-start-tag
+(1,28): adoption-agency-1.3
+(1,33): adoption-agency-1.3
+(1,33): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <b>
+|       <em>
+|         <foo>
+|           <foo>
+|     <em>
+|     <aside>
+|       <em>
+|         <b>
+
+#data
+<b><em><foo><foo><foo><aside></b>
+#errors
+(1,3): expected-doctype-but-got-start-tag
+(1,33): adoption-agency-1.3
+(1,33): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <b>
+|       <em>
+|         <foo>
+|           <foo>
+|             <foo>
+|     <aside>
+|       <b>
+
+#data
+<b><em><foo><foo><foo><aside></b></em>
+#errors
+(1,3): expected-doctype-but-got-start-tag
+(1,33): adoption-agency-1.3
+(1,38): unexpected-end-tag
+(1,38): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <b>
+|       <em>
+|         <foo>
+|           <foo>
+|             <foo>
+|     <aside>
+|       <b>
+
+#data
+<svg><foreignObject></foreignObject><title></svg>foo
+#errors
+(1,5): expected-doctype-but-got-start-tag
+(1,49): unexpected-end-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <svg svg>
+|       <svg foreignObject>
+|       <svg title>
+|     "foo"
+
+#data
+<svg xml:base xml:lang xml:space xml:baaah definitionurl>
+#errors
+(1,57): expected-doctype-but-got-start-tag
+(1,57): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <svg svg>
+|       definitionurl=""
+|       xml lang=""
+|       xml space=""
+|       xml:baaah=""
+|       xml:base=""
+
+#data
+<math definitionurl xlink:title xlink:show>
+#errors
+(1,43): expected-doctype-but-got-start-tag
+(1,43): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <math math>
+|       definitionURL=""
+|       xlink show=""
+|       xlink title=""
+
+#data
+<math DEFINITIONURL>
+#errors
+(1,20): expected-doctype-but-got-start-tag
+(1,20): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <math math>
+|       definitionURL=""
+
+#data
+<select><hr>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,12): eof-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <hr>
+
+#data
+<select><option><hr>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,20): eof-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <option>
+|       <hr>
+
+#data
+<select><optgroup><option><hr>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,30): eof-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <optgroup>
+|         <option>
+|       <hr>
+
+#data
+<select><optgroup><hr>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,22): eof-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <optgroup>
+|       <hr>
+
+#data
+<select><option><optgroup><hr>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,30): eof-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <option>
+|       <optgroup>
+|       <hr>
+
+#data
+<table><tr><td><select><hr>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,27): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <tbody>
+|         <tr>
+|           <td>
+|             <select>
+|               <hr>
+
+#data
+<table><tr><td><select><option><hr>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,35): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <tbody>
+|         <tr>
+|           <td>
+|             <select>
+|               <option>
+|               <hr>
+
+#data
+<table><tr><td><select><optgroup><option><hr>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,45): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <tbody>
+|         <tr>
+|           <td>
+|             <select>
+|               <optgroup>
+|                 <option>
+|               <hr>
+
+#data
+<table><tr><td><select><optgroup><hr>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,37): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <tbody>
+|         <tr>
+|           <td>
+|             <select>
+|               <optgroup>
+|               <hr>
+
+#data
+<table><tr><td><select><option><optgroup><hr>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,45): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <tbody>
+|         <tr>
+|           <td>
+|             <select>
+|               <option>
+|               <optgroup>
+|               <hr>
+
+#data
+<select><div><i></div><option>option
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,22): end-tag-too-early
+(1,36): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <div>
+|         <i>
+|       <i>
+|         <option>
+|           "option"
+
+#data
+<div><i></div><option>option
+#errors
+(1,5): expected-doctype-but-got-start-tag
+(1,14): end-tag-too-early
+(1,28): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <div>
+|       <i>
+|     <i>
+|       <option>
+|         "option"
+
+#data
+<select><div>div 1</div><button>button</button><div>div 2</div><datalist><option>option</option></datalist><div>div 3</div></select>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <div>
+|         "div 1"
+|       <button>
+|         "button"
+|       <div>
+|         "div 2"
+|       <datalist>
+|         <option>
+|           "option"
+|       <div>
+|         "div 3"
+
+#data
+<select><button>button</select>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,31): unexpected-end-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <button>
+|         "button"
+
+#data
+<select><datalist>datalist</select>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,35): unexpected-end-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <datalist>
+|         "datalist"
+
+#data
+<select><button><select></select></button></select>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,24): unexpected-select-in-select
+(1,33): unexpected-end-tag
+(1,42): end-tag-too-early
+(1,51): unexpected-end-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <button>
+
+#data
+<select><button><div><select></select>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,29): unexpected-select-in-select
+(1,38): unexpected-end-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <button>
+|         <div>
+
+#data
+<select><div><option><img>option</option></div></select>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <div>
+|         <option>
+|           <img>
+|           "option"
+
+#data
+<select><input>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,15): unexpected-input-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|     <input>
+
+#data
+<select><button><selectedcontent></button><option>X
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,42): unexpected-end-tag
+(1,51): eof-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <button>
+|         <selectedcontent>
+|       <option>
+|         "X"
+
+#data
+<select><button><selectedcontent></button><option>x<i>i<b>ib</i>b
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,42): unexpected-end-tag
+(1,64): adoption-agency-1.3
+(1,65): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <button>
+|         <selectedcontent>
+|       <option>
+|         "x"
+|         <i>
+|           "i"
+|           <b>
+|             "ib"
+|         <b>
+|           "b"
+
+#data
+<select><button><selectedcontent></button><option>X<option>Y
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,42): unexpected-end-tag
+(1,60): eof-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <button>
+|         <selectedcontent>
+|       <option>
+|         "X"
+|       <option>
+|         "Y"
+
+#data
+<select><button><selectedcontent></button><option>X<option selected>Y
+#errors
+(1,8): expected-doctype-but-got-start-tag
+(1,42): unexpected-end-tag
+(1,69): eof-in-select
+#document
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <button>
+|         <selectedcontent>
+|       <option>
+|         "X"
+|       <option>
+|         selected=""
+|         "Y"
+
+#data
+<code><select><option>a</option></code></select>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,39): adoption-agency-4.4
+(1,48): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <code>
+|       <select>
+|         <option>
+|           "a"

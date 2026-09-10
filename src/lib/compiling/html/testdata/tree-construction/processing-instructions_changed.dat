@@ -1,0 +1,1319 @@
+#data
+<body><?something>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?something?>
+
+#data
+<body><?something><span>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,24): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?something?>
+|     <span>
+
+#data
+<body><?something good>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?something good?>
+
+#data
+<body><?something else is good>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?something else is good?>
+
+#data
+<body><?one><?two>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?one?>
+|     <?two?>
+
+#data
+<body><?a$><?b$><?good?>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:10) invalid-processing-instruction-target
+(1:15) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?a$ -->
+|     <!-- ?b$ -->
+|     <?good?>
+
+#data
+<body><?hey there?>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?hey there?>
+
+#data
+<body><?hey   there?>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?hey there?>
+
+#data
+<body><?hey?there>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?hey ?there?>
+
+#data
+<body><?hey\tthere=1?>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?hey there=1?>
+
+#data
+<body><?hey\nthere=1?>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?hey there=1?>
+
+#data
+<body><?hey\rthere=1?>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?hey there=1?>
+
+#data
+<body><?hey\fthere=1?>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?hey there=1?>
+
+#data
+<body><?something ? >
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?something ? ?>
+
+#data
+<body><?something x >
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?something x ?>
+
+#data
+<body><?something ?\t   ??>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?something ?\t   ??>
+
+#data
+<body><?t d > ?>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?t d ?>
+|     " ?>"
+
+#data
+<body><?module-handler>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?module-handler?>
+
+#data
+<body><?module-handler data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?module-handler data?>
+
+#data
+<body><?view-port>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?view-port?>
+
+#data
+<body><?view-port data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?view-port data?>
+
+#data
+<body><?config-v2>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?config-v2?>
+
+#data
+<body><?config-v2 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?config-v2 data?>
+
+#data
+<body><?x>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?x?>
+
+#data
+<body><?x data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?x data?>
+
+#data
+<body><?zz2op>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?zz2op?>
+
+#data
+<body><?zz2op data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?zz2op data?>
+
+#data
+<body><?xla->
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?xla-?>
+
+#data
+<body><?xla- data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?xla- data?>
+
+#data
+<body><?a-b-c>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?a-b-c?>
+
+#data
+<body><?a-b-c data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?a-b-c data?>
+
+#data
+<body><?v-123>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?v-123?>
+
+#data
+<body><?v-123 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?v-123 data?>
+
+#data
+<body><?a0-b1-c2>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?a0-b1-c2?>
+
+#data
+<body><?a0-b1-c2 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?a0-b1-c2 data?>
+
+#data
+<body><?page-404>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?page-404?>
+
+#data
+<body><?page-404 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?page-404 data?>
+
+#data
+<body><?r2-d2>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?r2-d2?>
+
+#data
+<body><?r2-d2 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?r2-d2 data?>
+
+#data
+<body><?level-99>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?level-99?>
+
+#data
+<body><?level-99 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?level-99 data?>
+
+#data
+<body><?UPPERCASE>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?UPPERCASE?>
+
+#data
+<body><?UPPERCASE data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?UPPERCASE data?>
+
+#data
+<body><?all-KINDS-of-CaSeS>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?all-KINDS-of-CaSeS?>
+
+#data
+<body><?all-KINDS-of-CaSeS data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?all-KINDS-of-CaSeS data?>
+
+#data
+<body><?user_name>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?user_name?>
+
+#data
+<body><?user_name data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?user_name data?>
+
+#data
+<body><?S_S-S_S>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?S_S-S_S?>
+
+#data
+<body><?S_S-S_S data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?S_S-S_S data?>
+
+#data
+<body><?b_>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?b_?>
+
+#data
+<body><?b_ data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?b_ data?>
+
+#data
+<body><?_prefix>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?_prefix?>
+
+#data
+<body><?_prefix data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?_prefix data?>
+
+#data
+<body><?_x132>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?_x132?>
+
+#data
+<body><?_x132 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?_x132 data?>
+
+#data
+<body><?_-_>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?_-_?>
+
+#data
+<body><?_-_ data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?_-_ data?>
+
+#data
+<body><?_>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?_?>
+
+#data
+<body><?_ data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?_ data?>
+
+#data
+<body><?A---------------->
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?A----------------?>
+
+#data
+<body><?A---------------- data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?A---------------- data?>
+
+#data
+<body><?z0123456789>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?z0123456789?>
+
+#data
+<body><?z0123456789 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?z0123456789 data?>
+
+#data
+<body><?m-0>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?m-0?>
+
+#data
+<body><?m-0 data>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <?m-0 data?>
+
+#data
+<body><?xml>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:12) disallowed-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?xml -->
+
+#data
+<body><?xml-stylesheet>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:23) disallowed-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?xml-stylesheet -->
+
+#data
+<body><?XML>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:12) disallowed-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?XML -->
+
+#data
+<body><?XML-stylesheet>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:23) disallowed-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?XML-stylesheet -->
+
+#data
+<body><?xML>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:12) disallowed-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?xML -->
+
+#data
+<body><?xml-STYLesheet>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:23) disallowed-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?xml-STYLesheet -->
+
+#data
+<body><?1st-place>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?1st-place -->
+
+#data
+<body><?2-factor>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?2-factor -->
+
+#data
+<body><?99-problems>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?99-problems -->
+
+#data
+<body><?\u0665-star>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?٥-star -->
+
+#data
+<body><?-prefix>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?-prefix -->
+
+#data
+<body><?--internal>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?--internal -->
+
+#data
+<body><?-data->
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?-data- -->
+
+#data
+<body><?-100>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?-100 -->
+
+#data
+<body><?\u00B7middle-dot>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?·middle-dot -->
+
+#data
+<body><?\u0375greek-numeral>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?͵greek-numeral -->
+
+#data
+<body><?\u0301accent-start>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?́accent-start -->
+
+#data
+<body><?price$value>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:14) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?price$value -->
+
+#data
+<body><?user@domain>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:13) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?user@domain -->
+
+#data
+<body><?tag#id>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:12) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?tag#id -->
+
+#data
+<body><?a+b>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:10) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?a+b -->
+
+#data
+<body><?100%>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?100% -->
+
+#data
+<body><?data.v1>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:13) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?data.v1 -->
+
+#data
+<body><?namespace:tag>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:18) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?namespace:tag -->
+
+#data
+<body><?error!code>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:14) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?error!code -->
+
+#data
+<body><?x=y>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:10) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?x=y -->
+
+#data
+<body><?a<b>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:10) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?a<b -->
+
+#data
+<body><?true&false>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:13) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?true&false -->
+
+#data
+<body><?not|or>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:12) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?not|or -->
+
+#data
+<body><?lit$123456789>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:12) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?lit$123456789 -->
+
+#data
+<body><?lit$$4x>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:12) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?lit$$4x -->
+
+#data
+<body><?\uD83D\uDE80-launch>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?🚀-launch -->
+
+#data
+<body><?error-\u26A0\uFE0F>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:15) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?error-⚠️ -->
+
+#data
+<body><?fire-\uD83D\uDD25>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:14) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?fire-🔥 -->
+
+#data
+<body><?v1-\u2705>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:12) invalid-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?v1-✅ -->
+
+#data
+<body><?start
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:14) eof-in-processing-instruction
+#document
+| <html>
+|   <head>
+|   <body>
+
+#data
+<body><?start?
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:15) eof-in-processing-instruction
+#document
+| <html>
+|   <head>
+|   <body>
+
+#data
+<body><?start 
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:15) eof-in-processing-instruction
+#document
+| <html>
+|   <head>
+|   <body>
+
+#data
+<body><?start data
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:19) eof-in-processing-instruction
+#document
+| <html>
+|   <head>
+|   <body>
+
+#data
+<body><?start ? ?
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:18) eof-in-processing-instruction
+#document
+| <html>
+|   <head>
+|   <body>
+
+#data
+<body><?
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) eof-in-processing-instruction
+#document
+| <html>
+|   <head>
+|   <body>
+
+#data
+<body><? 
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#new-errors
+(1:9) invalid-first-character-of-processing-instruction-target
+#document
+| <html>
+|   <head>
+|   <body>
+|     <!-- ?  -->
+
+#data
+<div><?something></div>
+#errors
+(1,5): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <div>
+|       <?something?>
+
+#data
+<div><?something good></div>
+#errors
+(1,5): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <div>
+|       <?something good?>
+
+#data
+<table><?something></table>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <?something?>
+
+#data
+<table><tr><?something></tr></table>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <table>
+|       <tbody>
+|         <tr>
+|           <?something?>
+
+#data
+<script><?something></script>
+#errors
+(1,8): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|     <script>
+|       "<?something>"
+|   <body>
+
+#data
+<style><?something></style>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|     <style>
+|       "<?something>"
+|   <body>
+
+#data
+<?something>
+#errors
+(1,12): expected-doctype-but-got-eof
+#document
+| <?something?>
+| <html>
+|   <head>
+|   <body>
+
+#data
+<head><?something>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|     <?something?>
+|   <body>
+
+#data
+<html><?something><head>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <?something?>
+|   <head>
+|   <body>
+
+#data
+<html><head></head><?something><body>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <?something?>
+|   <body>
+
+#data
+<html><body></body><?something>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|   <?something?>
+
+#data
+<html><body></body></html><?something>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+| <?something?>
+
+#data
+<body><template><?something></template>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <template>
+|       content
+|         <?something?>
+
+#data
+<body><textarea><?something></textarea>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <textarea>
+|       "<?something>"
+
+#data
+<body><title><?something></title>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <title>
+|       "<?something>"
+

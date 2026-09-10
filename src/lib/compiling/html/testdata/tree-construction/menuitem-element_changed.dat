@@ -1,0 +1,241 @@
+#data
+<menuitem>
+#errors
+(1,10): expected-doctype-but-got-start-tag
+(1,10): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+
+#data
+</menuitem>
+#errors
+(1,11): expected-doctype-but-got-end-tag
+(1,11): unexpected-end-tag-before-html
+#document
+| <html>
+|   <head>
+|   <body>
+
+#data
+<!DOCTYPE html><body><menuitem>A
+#errors
+(1,32): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       "A"
+
+#data
+<!DOCTYPE html><body><menuitem>A<menuitem>B
+#errors
+(1,43): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       "A"
+|       <menuitem>
+|         "B"
+
+#data
+<!DOCTYPE html><body><menuitem>A<menu>B</menu>
+#errors
+(1,46): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       "A"
+|       <menu>
+|         "B"
+
+#data
+<!DOCTYPE html><body><menuitem>A<hr>B
+#errors
+(1,37): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       "A"
+|       <hr>
+|       "B"
+
+#data
+<!DOCTYPE html><li><menuitem><li>
+#errors
+(1,33): end-tag-too-early
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <li>
+|       <menuitem>
+|     <li>
+
+#data
+<!DOCTYPE html><menuitem><p></menuitem>x
+#errors
+(1,39): unexpected-end-tag
+(1,40): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       <p>
+|         "x"
+
+#data
+<!DOCTYPE html><p><b></p><menuitem>
+#errors
+(1,25): unexpected-end-tag
+(1,35): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <p>
+|       <b>
+|     <b>
+|       <menuitem>
+
+#data
+<!DOCTYPE html><menuitem><asdf></menuitem>x
+#errors
+(1,42): unexpected-end-tag
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       <asdf>
+|     "x"
+
+#data
+<!DOCTYPE html></menuitem>
+#errors
+(1,26): unexpected-end-tag-before-html
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+
+#data
+<!DOCTYPE html><html></menuitem>
+#errors
+(1,32): end-tag-after-implied-root
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+
+#data
+<!DOCTYPE html><head></menuitem>
+#errors
+(1,32): unexpected-end-tag
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+
+#data
+<!DOCTYPE html><select><menuitem></select>
+#errors
+(1,42): unexpected-end-tag
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <select>
+|       <menuitem>
+
+#data
+<!DOCTYPE html><option><menuitem>
+#errors
+(1,33): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <option>
+|       <menuitem>
+
+#data
+<!DOCTYPE html><menuitem><option>
+#errors
+(1,33): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       <option>
+
+#data
+<!DOCTYPE html><menuitem></body>
+#errors
+(1,32): expected-one-end-tag-but-got-another
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+
+#data
+<!DOCTYPE html><menuitem></html>
+#errors
+(1,32): expected-one-end-tag-but-got-another
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+
+#data
+<!DOCTYPE html><menuitem><p>
+#errors
+(1,28): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       <p>
+
+#data
+<!DOCTYPE html><menuitem><li>
+#errors
+(1,29): expected-closing-tag-but-got-eof
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <menuitem>
+|       <li>

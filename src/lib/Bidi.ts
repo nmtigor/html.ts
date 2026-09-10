@@ -1,0 +1,1672 @@
+/** 80**************************************************************************
+ * For moving the caret forward/backward by visual ordering more efficiently
+ *
+ * * Ref. https://github.com/lojjic/bidi-js
+ *   * Add types
+ *
+ * * Ref. [Unicode Bidirectional Algorithm, Unicode 16.0.0](http://www.unicode.org/reports/tr9/)
+ *
+ * @module lib/Bidi
+ * @license MIT
+ ******************************************************************************/
+
+import { _TRACE, INOUT } from "../preNs.ts";
+import type { BufrDir, loff_t, uint, uint8 } from "./alias.ts";
+import { ChrTyp } from "./alias.ts";
+import type { Chr, Id_t, Ts_t } from "./alias_v.ts";
+import "./jslang.ts";
+import { canonicalOf, chrTypOf, closingOf, openingOf } from "./loadBidi.ts";
+import { assert, out } from "./util.ts";
+import { trace, traceOut } from "./util/trace.ts";
+/*80--------------------------------------------------------------------------*/
+
+const ISOLATE_INIT = ChrTyp.LRI | ChrTyp.RLI | ChrTyp.FSI;
+type ISOLATE_INIT = ChrTyp.LRI | ChrTyp.RLI | ChrTyp.FSI;
+const ISOLATE = ISOLATE_INIT | ChrTyp.PDI;
+type ISOLATE = ISOLATE_INIT | ChrTyp.PDI;
+const STRONG = ChrTyp.L | ChrTyp.R | ChrTyp.AL;
+const NAMED_NEUTRAL = ChrTyp.B | ChrTyp.S | ChrTyp.WS;
+type NAMED_NEUTRAL = ChrTyp.B | ChrTyp.S | ChrTyp.WS;
+const NEUTRAL = NAMED_NEUTRAL | ChrTyp.ON;
+type NEUTRAL = NAMED_NEUTRAL | ChrTyp.ON;
+const NEUTRAL_ISOLATE = NEUTRAL | ISOLATE;
+type NEUTRAL_ISOLATE = NEUTRAL | ISOLATE;
+const EMBEDDING_INIT = ChrTyp.RLE | ChrTyp.LRE;
+const OVERRIDE_INIT = ChrTyp.RLO | ChrTyp.LRO;
+const BN_LIKE = ChrTyp.BN | EMBEDDING_INIT | OVERRIDE_INIT | ChrTyp.PDF;
+const TRAILING = NAMED_NEUTRAL | ISOLATE | BN_LIKE;
+
+type EmbedLevel = uint8;
+type Paragraph_ = { start: uint; end: uint; level: EmbedLevel };
+type GetEmbeddingLevelsR_ = {
+  paragraphs: Paragraph_[];
+  levels: Uint8Array;
+};
+
+const enum OverrideStatus {
+  /** Neutral */
+  N = 0,
+  /** Left-to-right */
+  L = ChrTyp.L,
+  /** Right-to-left */
+  R = ChrTyp.R,
+}
+type Status_ = {
+  _level: EmbedLevel;
+  _override: OverrideStatus;
+  _isolate: boolean;
+  _isolInitIndex?: uint;
+};
+
+type LevelRun = {
+  _start: uint;
+  _end: uint;
+  _level: EmbedLevel;
+  _startsWithPDI: boolean;
+  _endsWithIsolInit: boolean;
+};
+
+type IsolRunSeq = {
+  _seqIndices: uint[];
+  _sosType: ChrTyp.R | ChrTyp.L;
+  _eosType: ChrTyp.R | ChrTyp.L;
+};
+
+/**
+ * Ref. https://github.com/lojjic/bidi-js/blob/main/src/embeddingLevels.js
+ *
+ * This function applies the Bidirectional Algorithm to a string, returning the
+ * resolved embedding levels in a single Uint8Array plus a list of objects
+ * holding each paragraph's start and end indices and resolved base embedding
+ * level.
+ *
+ * @const @param string_x The input string
+ * @const @param baseDirection_x Use "ltr" or "rtl" to force a base paragraph
+ *   direction, otherwise a direction will be chosen automatically from each
+ *   paragraph's contents.
+ */
+function getEmbeddingLevels(
+  string_x: string,
+  baseDirection_x: BufrDir | "auto",
+): GetEmbeddingLevelsR_ {
+  const MAX_DEPTH = 125;
+  const IN_LEN = string_x.length;
+
+  /* Start by mapping all characters to their unicode type, as a bitmask integer */
+  const charTypes = new Uint32Array(IN_LEN);
+  for (let i = 0; i < IN_LEN; i++) {
+    charTypes[i] = chrTypOf(string_x[i]);
+  }
+
+  /** will be cleared at start of each paragraph */
+  const charTypeCounts = new Map<ChrTyp | NEUTRAL_ISOLATE, uint>();
+  function changeCharType(i_y: uint, type_y: ChrTyp) {
+    const oldType: ChrTyp = charTypes[i_y];
+    charTypes[i_y] = type_y;
+
+    charTypeCounts.set(oldType, charTypeCounts.get(oldType)! - 1);
+    if (oldType & NEUTRAL_ISOLATE) {
+      charTypeCounts.set(
+        NEUTRAL_ISOLATE,
+        charTypeCounts.get(NEUTRAL_ISOLATE)! - 1,
+      );
+    }
+    charTypeCounts.set(type_y, (charTypeCounts.get(type_y) || 0) + 1);
+    if (type_y & NEUTRAL_ISOLATE) {
+      charTypeCounts.set(
+        NEUTRAL_ISOLATE,
+        (charTypeCounts.get(NEUTRAL_ISOLATE) || 0) + 1,
+      );
+    }
+  }
+
+  const embedLevels = new Uint8Array(IN_LEN);
+  /** init->pdi and pdi->init */
+  const isolationPairs = new Map<uint, uint>();
+
+  /* === 3.3.1 The Paragraph Level === */
+
+  /* 3.3.1 P1. Split the text into paragraphs */
+  const paragraphs: Paragraph_[] = [];
+  let paragraph_: Paragraph_ | undefined;
+  for (let i = 0; i < IN_LEN; i++) {
+    if (!paragraph_) {
+      paragraphs.push(
+        paragraph_ = {
+          start: i,
+          end: IN_LEN - 1,
+          /* 3.3.1 P2-P3. Determine the paragraph level */
+          level: baseDirection_x === "rtl"
+            ? 1
+            : baseDirection_x === "ltr"
+            ? 0
+            : determineAutoEmbedLevel(i, false),
+        },
+      );
+    }
+    if (charTypes[i] & ChrTyp.B) {
+      paragraph_!.end = i;
+      paragraph_ = undefined;
+    }
+  }
+
+  const FORMATTING = EMBEDDING_INIT | OVERRIDE_INIT | ChrTyp.PDF | ISOLATE |
+    ChrTyp.B;
+  const nextEven = (n: EmbedLevel) => n + ((n & 1) ? 1 : 2);
+  const nextOdd = (n: EmbedLevel) => n + ((n & 1) ? 2 : 1);
+
+  /* Everything from here on will operate per paragraph. */
+  for (const paragraph of paragraphs) {
+    const statusStack: Status_[] = [{
+      _level: paragraph.level,
+      _override: OverrideStatus.N,
+      _isolate: false,
+    }];
+    let stackTop: Status_;
+    let overflowIsolateCount = 0;
+    let overflowEmbeddingCount = 0;
+    let validIsolateCount = 0;
+    charTypeCounts.clear();
+
+    /* === 3.3.2 Explicit Levels and Directions === */
+    for (let i = paragraph.start, iI = paragraph.end; i <= iI; i++) {
+      let charType = charTypes[i];
+      stackTop = statusStack.at(-1)!;
+
+      /* Set initial counts */
+      charTypeCounts.set(charType, (charTypeCounts.get(charType) || 0) + 1);
+      if (charType & NEUTRAL_ISOLATE) {
+        charTypeCounts.set(
+          NEUTRAL_ISOLATE,
+          (charTypeCounts.get(NEUTRAL_ISOLATE) || 0) + 1,
+        );
+      }
+
+      /* Explicit Embeddings: 3.3.2 X2 - X3 */
+      if (charType & FORMATTING) { // prefilter all formatters
+        if (charType & EMBEDDING_INIT) {
+          embedLevels[i] = stackTop._level; // 5.2
+          const level = (charType === ChrTyp.RLE ? nextOdd : nextEven)(
+            stackTop._level,
+          );
+          if (
+            level <= MAX_DEPTH &&
+            overflowIsolateCount === 0 &&
+            overflowEmbeddingCount === 0
+          ) {
+            statusStack.push({
+              _level: level,
+              _override: OverrideStatus.N,
+              _isolate: false,
+            });
+          } else if (!overflowIsolateCount) {
+            overflowEmbeddingCount++;
+          }
+        } //
+        /* Explicit Overrides: 3.3.2 X4 - X5 */
+        else if (charType & OVERRIDE_INIT) {
+          embedLevels[i] = stackTop._level; // 5.2
+          const level = (charType === ChrTyp.RLO ? nextOdd : nextEven)(
+            stackTop._level,
+          );
+          if (
+            level <= MAX_DEPTH &&
+            overflowIsolateCount === 0 &&
+            overflowEmbeddingCount === 0
+          ) {
+            statusStack.push({
+              _level: level,
+              _override: (charType & ChrTyp.RLO)
+                ? OverrideStatus.R
+                : OverrideStatus.L,
+              _isolate: false,
+            });
+          } else if (!overflowIsolateCount) {
+            overflowEmbeddingCount++;
+          }
+        } //
+        /* Isolates: 3.3.2 X5a - X5c */
+        else if (charType & ISOLATE_INIT) {
+          /* X5c. FSI becomes either RLI or LRI */
+          if (charType & ChrTyp.FSI) {
+            charType = determineAutoEmbedLevel(i + 1, true) === 1
+              ? ChrTyp.RLI
+              : ChrTyp.LRI;
+          }
+
+          embedLevels[i] = stackTop._level;
+          if (stackTop._override) {
+            changeCharType(i, stackTop._override as unknown as ChrTyp);
+          }
+          const level = (charType === ChrTyp.RLI ? nextOdd : nextEven)(
+            stackTop._level,
+          );
+          if (
+            level <= MAX_DEPTH &&
+            overflowIsolateCount === 0 &&
+            overflowEmbeddingCount === 0
+          ) {
+            validIsolateCount++;
+            statusStack.push({
+              _level: level,
+              _override: OverrideStatus.N,
+              _isolate: true,
+              _isolInitIndex: i,
+            });
+          } else {
+            overflowIsolateCount++;
+          }
+        } //
+        /* Terminating Isolates: 3.3.2 X6a */
+        else if (charType & ChrTyp.PDI) {
+          if (overflowIsolateCount > 0) {
+            overflowIsolateCount--;
+          } else if (validIsolateCount > 0) {
+            overflowEmbeddingCount = 0;
+            while (!statusStack.at(-1)!._isolate) {
+              statusStack.pop();
+            }
+            /* Add to isolation pairs bidirectional mapping: */
+            const isolInitIndex = statusStack.at(-1)!._isolInitIndex;
+            if (isolInitIndex != undefined) {
+              isolationPairs.set(isolInitIndex, i);
+              isolationPairs.set(i, isolInitIndex);
+            }
+            statusStack.pop();
+            validIsolateCount--;
+          }
+          stackTop = statusStack.at(-1)!;
+          embedLevels[i] = stackTop._level;
+          if (stackTop._override) {
+            changeCharType(i, stackTop._override as unknown as ChrTyp);
+          }
+        } //
+        /* Terminating Embeddings and Overrides: 3.3.2 X7 */
+        else if (charType & ChrTyp.PDF) {
+          if (overflowIsolateCount === 0) {
+            if (overflowEmbeddingCount > 0) {
+              overflowEmbeddingCount--;
+            } else if (!stackTop._isolate && statusStack.length > 1) {
+              statusStack.pop();
+              stackTop = statusStack.at(-1)!;
+            }
+          }
+          embedLevels[i] = stackTop._level; // 5.2
+        } //
+        /* End of Paragraph_: 3.3.2 X8 */
+        else if (charType & ChrTyp.B) {
+          embedLevels[i] = paragraph.level;
+        }
+      } //
+      /* Non-formatting characters: 3.3.2 X6 */
+      else {
+        embedLevels[i] = stackTop._level;
+        /* NOTE: This exclusion of BN seems to go against what section 5.2 says,
+        but is required for test passage. */
+        if (stackTop._override && charType !== ChrTyp.BN) {
+          changeCharType(
+            i,
+            stackTop._override as unknown as ChrTyp,
+          );
+        }
+      }
+    }
+
+    /* === 3.3.3 Preparations for Implicit Processing === */
+
+    /* Remove all RLE, LRE, RLO, LRO, PDF, and BN characters: 3.3.3 X9
+    NOTE: Due to section 5.2, we won't remove them, but we'll use the BN_LIKE
+      bitset to easily ignore them all from here on out. */
+
+    /* 3.3.3 X10. Compute the set of isolating run sequences as specified by BD13 */
+    const levelRuns: LevelRun[] = [];
+    let currentRun: LevelRun | undefined;
+    for (let i = paragraph.start, iI = paragraph.end; i <= iI; i++) {
+      const charType = charTypes[i];
+      if (charType & BN_LIKE) continue;
+
+      const lvl = embedLevels[i];
+      const isIsolInit = !!(charType & ISOLATE_INIT);
+      const isPDI = charType === ChrTyp.PDI;
+      if (currentRun && lvl === currentRun._level) {
+        currentRun._end = i;
+        currentRun._endsWithIsolInit = isIsolInit;
+      } else {
+        levelRuns.push(
+          currentRun = {
+            _start: i,
+            _end: i,
+            _level: lvl,
+            _startsWithPDI: isPDI,
+            _endsWithIsolInit: isIsolInit,
+          },
+        );
+      }
+    }
+    const isolatingRunSeqs: IsolRunSeq[] = [];
+    for (let runIdx = 0; runIdx < levelRuns.length; runIdx++) {
+      const run = levelRuns[runIdx];
+      if (
+        !run._startsWithPDI ||
+        (run._startsWithPDI && !isolationPairs.has(run._start))
+      ) {
+        const seqRuns = [currentRun = run];
+        for (
+          let pdiIndex;
+          currentRun?._endsWithIsolInit &&
+          (pdiIndex = isolationPairs.get(currentRun._end)) !== undefined;
+        ) {
+          for (let i = runIdx + 1; i < levelRuns.length; i++) {
+            if (levelRuns[i]._start === pdiIndex) {
+              seqRuns.push(currentRun = levelRuns[i]);
+              break;
+            }
+          }
+        }
+        /* build flat list of indices across all runs: */
+        const seqIndices: uint[] = [];
+        for (let i = 0; i < seqRuns.length; i++) {
+          const run = seqRuns[i];
+          for (let j = run._start; j <= run._end; j++) {
+            seqIndices.push(j);
+          }
+        }
+        /* determine the sos/eos types: */
+        const firstLevel = embedLevels[seqIndices[0]];
+        let prevLevel = paragraph.level;
+        for (let i = seqIndices[0] - 1; i >= 0; i--) {
+          if (!(charTypes[i] & BN_LIKE)) { // 5.2
+            prevLevel = embedLevels[i];
+            break;
+          }
+        }
+        const lastIndex = seqIndices.at(-1)!;
+        const lastLevel = embedLevels[lastIndex];
+        let nextLevel = paragraph.level;
+        if (!(charTypes[lastIndex] & ISOLATE_INIT)) {
+          for (let i = lastIndex + 1; i <= paragraph.end; i++) {
+            if (!(charTypes[i] & BN_LIKE)) { // 5.2
+              nextLevel = embedLevels[i];
+              break;
+            }
+          }
+        }
+        isolatingRunSeqs.push({
+          _seqIndices: seqIndices,
+          _sosType: Math.max(prevLevel, firstLevel) % 2 ? ChrTyp.R : ChrTyp.L,
+          _eosType: Math.max(nextLevel, lastLevel) % 2 ? ChrTyp.R : ChrTyp.L,
+        });
+      }
+    }
+
+    /* The next steps are done per isolating run sequence */
+    for (
+      const {
+        _seqIndices: seqIndices,
+        _sosType: sosType,
+        _eosType: eosType,
+      } of isolatingRunSeqs
+    ) {
+      const embedLevel = embedLevels[seqIndices[0]];
+      /**
+       * All the level runs in an isolating run sequence have the same embedding
+       * level.\
+       * ! DO NOT change any `embedLevels[i]` within the current scope.
+       */
+      const embedDirection = (embedLevel & 1) ? ChrTyp.R : ChrTyp.L;
+
+      /* === 3.3.4 Resolving Weak Types === */
+
+      /* W1 + 5.2. Search backward from each NSM to the first character in the
+      isolating run sequence whose bidirectional type is not BN, and set the
+      NSM to ON if it is an isolate initiator or PDI, and to its type
+      otherwise. If the NSM is the first non-BN character, change the NSM to
+      the type of sos. */
+      if (charTypeCounts.get(ChrTyp.NSM)) {
+        for (let si = 0, siI = seqIndices.length; si < siI; si++) {
+          const i = seqIndices[si];
+          if (charTypes[i] & ChrTyp.NSM) {
+            let prevType = sosType;
+            for (let sj = si - 1; sj >= 0; sj--) {
+              /* 5.2 scan back to first non-BN */
+              if (!(charTypes[seqIndices[sj]] & BN_LIKE)) {
+                prevType = charTypes[seqIndices[sj]];
+                break;
+              }
+            }
+            changeCharType(
+              i,
+              (prevType & (ISOLATE_INIT | ChrTyp.PDI)) ? ChrTyp.ON : prevType,
+            );
+          }
+        }
+      }
+
+      /* W2. Search backward from each instance of a European number until the
+      first strong type (R, L, AL, or sos) is found. If an AL is found, change
+      the type of the European number to Arabic number. */
+      if (charTypeCounts.get(ChrTyp.EN)) {
+        for (let si = 0, siI = seqIndices.length; si < siI; si++) {
+          const i = seqIndices[si];
+          if (charTypes[i] & ChrTyp.EN) {
+            for (let sj = si - 1; sj >= -1; sj--) {
+              const prevCharType = sj === -1
+                ? sosType
+                : charTypes[seqIndices[sj]];
+              if (prevCharType & STRONG) {
+                if (prevCharType === ChrTyp.AL) {
+                  changeCharType(i, ChrTyp.AN);
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      /* W3. Change all ALs to R */
+      if (charTypeCounts.get(ChrTyp.AL)) {
+        for (const i of seqIndices) {
+          if (charTypes[i] & ChrTyp.AL) {
+            changeCharType(i, ChrTyp.R);
+          }
+        }
+      }
+
+      /* W4. A single European separator between two European numbers changes to
+      a European number. A single common separator between two numbers of the
+      same type changes to that type. */
+      if (charTypeCounts.get(ChrTyp.ES) || charTypeCounts.get(ChrTyp.CS)) {
+        for (let si = 1, siI = seqIndices.length; si < siI - 1; si++) {
+          const i = seqIndices[si];
+          if (charTypes[i] & (ChrTyp.ES | ChrTyp.CS)) {
+            let prevType = 0, nextType = 0;
+            for (let sj = si - 1; sj >= 0; sj--) {
+              prevType = charTypes[seqIndices[sj]];
+              if (!(prevType & BN_LIKE)) { // 5.2
+                break;
+              }
+            }
+            for (let sj = si + 1; sj < siI; sj++) {
+              nextType = charTypes[seqIndices[sj]];
+              if (!(nextType & BN_LIKE)) { // 5.2
+                break;
+              }
+            }
+            if (
+              prevType === nextType &&
+              (charTypes[i] === ChrTyp.ES
+                ? prevType === ChrTyp.EN
+                : (prevType & (ChrTyp.EN | ChrTyp.AN)))
+            ) {
+              changeCharType(i, prevType);
+            }
+          }
+        }
+      }
+
+      /* W5. A sequence of European terminators adjacent to European numbers
+      changes to all European numbers. */
+      if (charTypeCounts.get(ChrTyp.EN)) {
+        for (let si = 0, siI = seqIndices.length; si < siI; si++) {
+          const i = seqIndices[si];
+          if (charTypes[i] & ChrTyp.EN) {
+            for (
+              let sj = si - 1;
+              sj >= 0 &&
+              (charTypes[seqIndices[sj]] & (ChrTyp.ET | BN_LIKE));
+              sj--
+            ) {
+              changeCharType(seqIndices[sj], ChrTyp.EN);
+            }
+            for (
+              si++;
+              si < siI &&
+              (charTypes[seqIndices[si]] &
+                (ChrTyp.ET | BN_LIKE | ChrTyp.EN));
+              si++
+            ) {
+              if (charTypes[seqIndices[si]] !== ChrTyp.EN) {
+                changeCharType(seqIndices[si], ChrTyp.EN);
+              }
+            }
+          }
+        }
+      }
+
+      /* W6. Otherwise, separators and terminators change to Other Neutral. */
+      if (
+        charTypeCounts.get(ChrTyp.ET) || charTypeCounts.get(ChrTyp.ES) ||
+        charTypeCounts.get(ChrTyp.CS)
+      ) {
+        for (let si = 0, siI = seqIndices.length; si < siI; si++) {
+          const i = seqIndices[si];
+          if (charTypes[i] & (ChrTyp.ET | ChrTyp.ES | ChrTyp.CS)) {
+            changeCharType(i, ChrTyp.ON);
+            /* 5.2 transform adjacent BNs too: */
+            for (
+              let sj = si - 1;
+              sj >= 0 && (charTypes[seqIndices[sj]] & BN_LIKE);
+              sj--
+            ) {
+              changeCharType(seqIndices[sj], ChrTyp.ON);
+            }
+            for (
+              let sj = si + 1;
+              sj < seqIndices.length &&
+              (charTypes[seqIndices[sj]] & BN_LIKE);
+              sj++
+            ) {
+              changeCharType(seqIndices[sj], ChrTyp.ON);
+            }
+          }
+        }
+      }
+
+      /* W7. Search backward from each instance of a European number until the
+      first strong type (R, L, or sos) is found. If an L is found, then change
+      the type of the European number to L.
+      NOTE: implemented in single forward pass for efficiency */
+      if (charTypeCounts.get(ChrTyp.EN)) {
+        for (
+          let si = 0, siI = seqIndices.length, prevStrongType = sosType;
+          si < siI;
+          si++
+        ) {
+          const i = seqIndices[si];
+          const type = charTypes[i];
+          if (type & ChrTyp.EN) {
+            if (prevStrongType === ChrTyp.L) {
+              changeCharType(i, ChrTyp.L);
+            }
+          } else if (type & STRONG) {
+            prevStrongType = type;
+          }
+        }
+      }
+
+      /* === 3.3.5 Resolving Neutral and Isolate Formatting Types === */
+
+      if (charTypeCounts.get(NEUTRAL_ISOLATE)) {
+        /* N0. Process bracket pairs in an isolating run sequence sequentially in
+        the logical order of the text positions of the opening paired brackets
+        using the logic given below. Within this scope, bidirectional types EN
+        and AN are treated as R. */
+        const R_TYPES_FOR_N_STEPS = ChrTyp.R | ChrTyp.EN | ChrTyp.AN;
+        const STRONG_TYPES_FOR_N_STEPS = R_TYPES_FOR_N_STEPS | ChrTyp.L;
+
+        /* Identify the bracket pairs in the current isolating run sequence
+        according to BD16. */
+        const bracketPairs: [uint, uint][] = [];
+        {
+          const openerStack: { char: Chr; seqIndex: uint }[] = [];
+          for (let si = 0, siI = seqIndices.length; si < siI; si++) {
+            /* NOTE: For any potential bracket character we also test that it
+            still carries a NI type, as that may have been changed earlier. This
+            doesn't seem to be explicitly called out in the spec, but is
+            required for passage of certain tests. */
+            if (charTypes[seqIndices[si]] & NEUTRAL_ISOLATE) {
+              const char = string_x[seqIndices[si]] as Chr;
+              let oppositeBracket;
+              /* Opening bracket */
+              if (closingOf(char) !== undefined) {
+                if (openerStack.length < 63) {
+                  openerStack.push({ char, seqIndex: si });
+                } else {
+                  break;
+                }
+              } //
+              /* Closing bracket */
+              else if (
+                (oppositeBracket = openingOf(char)) !== undefined
+              ) {
+                for (
+                  let stackIdx = openerStack.length - 1;
+                  stackIdx >= 0;
+                  stackIdx--
+                ) {
+                  const stackChar = openerStack[stackIdx].char;
+                  if (
+                    stackChar === oppositeBracket ||
+                    stackChar === openingOf(canonicalOf(char)) ||
+                    closingOf(canonicalOf(stackChar)) === char
+                  ) {
+                    bracketPairs.push([openerStack[stackIdx].seqIndex, si]);
+                    /* pop the matching bracket and all following */
+                    openerStack.length = stackIdx;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+          bracketPairs.sort((a, b) => a[0] - b[0]);
+        }
+        /* For each bracket-pair element in the list of pairs of text positions */
+        for (let pairIdx = 0; pairIdx < bracketPairs.length; pairIdx++) {
+          const [openSeqIdx, closeSeqIdx] = bracketPairs[pairIdx];
+          /*
+          a. Inspect the bidirectional types of the characters enclosed within
+             the bracket pair.
+          b. If any strong type (either L or R) matching the embedding direction
+             is found, set the type for both brackets in the pair to match the
+             embedding direction.
+           */
+          let foundStrongType = false;
+          let useStrongType: 0 | ChrTyp.L | ChrTyp.R = 0;
+          for (let si = openSeqIdx + 1; si < closeSeqIdx; si++) {
+            const i = seqIndices[si];
+            if (charTypes[i] & STRONG_TYPES_FOR_N_STEPS) {
+              foundStrongType = true;
+              const lr = (charTypes[i] & R_TYPES_FOR_N_STEPS)
+                ? ChrTyp.R
+                : ChrTyp.L;
+              if (lr === embedDirection) {
+                useStrongType = lr;
+                break;
+              }
+            }
+          }
+          /*
+          c. Otherwise, if there is a strong type it must be opposite the
+             embedding direction. Therefore, test for an established context
+             with a preceding strong type by checking backwards before the
+             opening paired bracket until the first strong type (L, R, or
+             sos) is found.
+             1. If the preceding strong type is also opposite the embedding
+                direction, context is established, so set the type for both
+                brackets in the pair to that direction.
+             2. Otherwise set the type for both brackets in the pair to the
+                embedding direction.
+           */
+          if (foundStrongType && !useStrongType) {
+            useStrongType = sosType;
+            for (let si = openSeqIdx - 1; si >= 0; si--) {
+              const i = seqIndices[si];
+              if (charTypes[i] & STRONG_TYPES_FOR_N_STEPS) {
+                useStrongType = (charTypes[i] & R_TYPES_FOR_N_STEPS)
+                  ? ChrTyp.R
+                  : ChrTyp.L;
+                break;
+              }
+            }
+          }
+          if (useStrongType) {
+            charTypes[seqIndices[openSeqIdx]] =
+              charTypes[seqIndices[closeSeqIdx]] =
+                useStrongType;
+            /* Any number of characters that had original bidirectional
+            character type NSM prior to the application of W1 that immediately
+            follow a paired bracket which changed to L or R under N0 should
+            change to match the type of their preceding bracket. */
+            for (let si = openSeqIdx + 1; si < seqIndices.length; si++) {
+              if (!(charTypes[seqIndices[si]] & BN_LIKE)) {
+                if (chrTypOf(string_x[seqIndices[si]]) & ChrTyp.NSM) {
+                  charTypes[seqIndices[si]] = useStrongType;
+                }
+                break;
+              }
+            }
+            for (let si = closeSeqIdx + 1; si < seqIndices.length; si++) {
+              if (!(charTypes[seqIndices[si]] & BN_LIKE)) {
+                if (chrTypOf(string_x[seqIndices[si]]) & ChrTyp.NSM) {
+                  charTypes[seqIndices[si]] = useStrongType;
+                }
+                break;
+              }
+            }
+          }
+        }
+
+        /* N1. A sequence of NIs takes the direction of the surrounding strong
+        text if the text on both sides has the same direction.
+        N2. Any remaining NIs take the embedding direction. */
+        for (let si = 0, siI = seqIndices.length; si < siI; si++) {
+          if (!(charTypes[seqIndices[si]] & NEUTRAL_ISOLATE)) {
+            continue;
+          }
+
+          let niRunStart = si, niRunEnd = si;
+          let prevType = sosType;
+          for (let si2 = si - 1; si2 >= 0; si2--) {
+            if (charTypes[seqIndices[si2]] & BN_LIKE) {
+              niRunStart = si2; // 5.2 treat BNs adjacent to NIs as NIs
+            } else {
+              prevType = (charTypes[seqIndices[si2]] & R_TYPES_FOR_N_STEPS)
+                ? ChrTyp.R
+                : ChrTyp.L;
+              break;
+            }
+          }
+          let nextType = eosType;
+          for (let si2 = si + 1; si2 < siI; si2++) {
+            if (
+              charTypes[seqIndices[si2]] & (NEUTRAL_ISOLATE | BN_LIKE)
+            ) {
+              niRunEnd = si2;
+            } else {
+              nextType = (charTypes[seqIndices[si2]] & R_TYPES_FOR_N_STEPS)
+                ? ChrTyp.R
+                : ChrTyp.L;
+              break;
+            }
+          }
+          for (let sj = niRunStart; sj <= niRunEnd; sj++) {
+            charTypes[seqIndices[sj]] = prevType === nextType
+              ? prevType
+              : embedDirection;
+          }
+          si = niRunEnd;
+        }
+      }
+    }
+
+    /* === 3.3.6 Resolving Implicit Levels === */
+
+    for (let i = paragraph.start, iI = paragraph.end; i <= iI; i++) {
+      const level = embedLevels[i];
+      const type = charTypes[i];
+      /* I2. For all characters with an odd (right-to-left) embedding level,
+      those of type L, EN or AN go up one level. */
+      if (level & 1) {
+        if (type & (ChrTyp.L | ChrTyp.EN | ChrTyp.AN)) {
+          embedLevels[i]++;
+        }
+      } //
+      /* I1. For all characters with an even (left-to-right) embedding level,
+      those of type R go up one level and those of type AN or EN go up two
+      levels. */
+      else {
+        if (type & ChrTyp.R) {
+          embedLevels[i]++;
+        } else if (type & (ChrTyp.AN | ChrTyp.EN)) {
+          embedLevels[i] += 2;
+        }
+      }
+
+      /* 5.2: Resolve any LRE, RLE, LRO, RLO, PDF, or BN to the level of the
+      preceding character if there is one, and otherwise to the base level. */
+      if (type & BN_LIKE) {
+        embedLevels[i] = i === 0 ? paragraph.level : embedLevels[i - 1];
+      }
+
+      /* 3.4 L1.1-4: Reset the embedding level of segment/paragraph separators,
+      and any sequence of whitespace or isolate formatting characters preceding
+      them or the end of the paragraph, to the paragraph level.
+      NOTE: this will also need to be applied to each individual line ending
+      after line wrapping occurs. */
+      if (
+        i === paragraph.end || chrTypOf(string_x[i]) & (ChrTyp.S | ChrTyp.B)
+      ) {
+        for (
+          let j = i;
+          j >= 0 && (chrTypOf(string_x[j]) & TRAILING);
+          j--
+        ) {
+          embedLevels[j] = paragraph.level;
+        }
+      }
+    }
+  }
+
+  /* DONE! The resolved levels can then be used, after line wrapping, to flip
+  runs of characters according to section 3.4 Reordering Resolved Levels */
+  return {
+    levels: embedLevels,
+    paragraphs,
+  };
+
+  function determineAutoEmbedLevel(start_y: uint, isFSI_y: boolean): 0 | 1 {
+    /* 3.3.1 P2 - P3 */
+    for (let i = start_y; i < IN_LEN; i++) {
+      const charType = charTypes[i];
+      if (charType & (ChrTyp.R | ChrTyp.AL)) {
+        return 1;
+      }
+      if (
+        (charType & (ChrTyp.B | ChrTyp.L)) ||
+        (isFSI_y && charType === ChrTyp.PDI)
+      ) {
+        return 0;
+      }
+      if (charType & ISOLATE_INIT) {
+        const pdi = indexOfMatchingPDI(i);
+        i = pdi === -1 ? IN_LEN : pdi;
+      }
+    }
+    return 0;
+  }
+
+  function indexOfMatchingPDI(isolateStart: uint): uint | -1 {
+    /* 3.1.2 BD9 */
+    let isolationLevel: EmbedLevel = 1;
+    for (let i = isolateStart + 1; i < IN_LEN; i++) {
+      const charType = charTypes[i];
+      if (charType & ChrTyp.B) {
+        break;
+      }
+      if (charType & ChrTyp.PDI) {
+        if (--isolationLevel === 0) {
+          return i;
+        }
+      } else if (charType & ISOLATE_INIT) {
+        isolationLevel++;
+      }
+    }
+    return -1;
+  }
+}
+
+type Segment_ = [start: uint, end: uint];
+
+/**
+ * Given a start and end denoting a single line within a string, and a set of
+ * precalculated bidi embedding levels, produce a list of segments whose
+ * ordering should be flipped, in sequence.
+ *
+ * @const @param string_x The full input string
+ * @const @param embeddingLevelsResult_x The result object from getEmbeddingLevels
+ * @param start_x First character in a subset of the full string
+ * @param end_x Last character in a subset of the full string
+ * @return The list of start/end segments that should be flipped, in order.
+ */
+function getReorderSegments(
+  string_x: string,
+  embeddingLevelsResult_x: GetEmbeddingLevelsR_,
+  start_x?: uint,
+  end_x?: uint,
+): Segment_[] {
+  const IN_LEN = string_x.length;
+  start_x = Math.max(0, start_x ?? 0);
+  end_x = Math.min(IN_LEN - 1, end_x ?? IN_LEN - 1);
+
+  const segments: Segment_[] = [];
+  for (const paragraph of embeddingLevelsResult_x.paragraphs) {
+    const lineStart = Math.max(start_x, paragraph.start);
+    const lineEnd = Math.min(end_x, paragraph.end);
+    if (lineStart >= lineEnd) continue;
+
+    /* Local slice for mutation */
+    const lineLevels = embeddingLevelsResult_x.levels.slice(
+      lineStart,
+      lineEnd + 1,
+    );
+
+    /* 3.4 L1. 4. Reset any sequence of whitespace characters and/or isolate
+    formatting characters at the end of the line to the paragraph level. */
+    for (
+      let i = lineEnd;
+      i >= lineStart && (chrTypOf(string_x[i]) & TRAILING);
+      i--
+    ) {
+      lineLevels[i] = paragraph.level;
+    }
+
+    /*
+    L2. From the highest level found in the text to the lowest odd level on each
+      line, including intermediate levels not actually present in the text,
+      reverse any contiguous sequence of characters that are at that level or
+      higher.
+     */
+    let maxLevel = paragraph.level;
+    let minOddLevel = Infinity;
+    for (let i = 0, iI = lineLevels.length; i < iI; i++) {
+      const level = lineLevels[i];
+      if (level > maxLevel) maxLevel = level;
+      if (level < minOddLevel) minOddLevel = level | 1;
+    }
+    for (let lvl = maxLevel; lvl >= minOddLevel; lvl--) {
+      for (let i = 0, iI = lineLevels.length; i < iI; i++) {
+        if (lineLevels[i] < lvl) continue;
+
+        const segStart = i;
+        while (i + 1 < iI && lineLevels[i + 1] >= lvl) {
+          i++;
+        }
+        if (i > segStart) {
+          segments.push([lineStart + segStart, lineStart + i]);
+        }
+      }
+    }
+  }
+  return segments;
+}
+
+/**
+ * @const @param string_x
+ * @const @param embedLevelsResult_x
+ * @const @param iStrt_x
+ * @const @param iStop_x
+ * @out @param indices_x
+ * @return An array with character indices in their new bidi order
+ */
+function getReorderedIndices(
+  string_x: string,
+  embedLevelsResult_x: GetEmbeddingLevelsR_,
+  iStrt_x: uint = 0,
+  iStop_x: uint = string_x.length,
+  indices_x = Array.sparse<uint>(iStop_x),
+): uint[] {
+  /*#static*/ if (INOUT) {
+    assert(0 <= iStrt_x && iStrt_x < iStop_x && iStop_x <= string_x.length);
+    assert(iStop_x <= indices_x.length);
+  }
+  const segments = getReorderSegments(
+    string_x,
+    embedLevelsResult_x,
+    iStrt_x,
+    iStop_x - 1,
+  );
+  for (let i = iStrt_x; i < iStop_x; i++) {
+    indices_x[i] = i;
+  }
+  /* Reverse each segment in order */
+  segments.forEach(([start_y, end_y]) => {
+    const slice = indices_x.slice(start_y, end_y + 1);
+    for (let i = slice.length; i--;) {
+      indices_x[end_y - i] = slice[i];
+    }
+  });
+  return indices_x;
+}
+/*80--------------------------------------------------------------------------*/
+
+type Visul_ = loff_t;
+/** row side */
+enum RSide_ {
+  //jjjj TOCLEANUP
+  // unknown,
+  /** "caret" at leftmost position of a row */
+  left,
+  /** "caret" at non-leftmost and non-rightmost position of a row */
+  midl,
+  /** "caret" at rightmost position of a row */
+  rigt,
+}
+
+/** @final */
+export class Bidi {
+  static #ID = 0 as Id_t;
+  readonly id = ++Bidi.#ID as Id_t;
+  /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+
+  #text!: string;
+  get #empty() {
+    return this.#text.length === 0;
+  }
+
+  #dir!: BufrDir;
+  get #ltr(): boolean {
+    return this.#dir === "ltr";
+  }
+  get #rtl(): boolean {
+    return this.#dir === "rtl";
+  }
+
+  /* #wrap_a, #lastRow */
+  #wrap_a!: loff_t[];
+  #rowN: uint | undefined;
+  get rowN() {
+    return this.#rowN ??= this.#wrap_a.length;
+  }
+
+  /** `[ 0, #wrap_a.length )` */
+  #lastRow: uint = 0;
+  //jjjj TOCLEANUP
+  // get _lastRow() {
+  //   return this.#lastRow;
+  // }
+
+  /**
+   * Set `#lastRow`
+   * @const @param _x
+   * @return `#lastRow`
+   */
+  @out((self: Bidi, ret) => {
+    assert(0 <= ret! && ret! < self.rowN);
+  })
+  rowOf(_x: Visul_ | loff_t = this.#lastVisul) {
+    let ret: uint;
+    for (let r = 0, rR = this.rowN; r < rR; ++r) {
+      if (_x < this.#wrap_a[r]) {
+        ret = r;
+        break;
+      }
+      //jjjj TOCLEANUP
+      // if (_x === this.#wrap_a[r]) {
+      //   //jjjj TOCLEANUP
+      //   // ret = r + 1 === this.#lastRow ? r + 1 : r;
+      //   ret = r + 1;
+      //   break;
+      // }
+    }
+    ret ??= this.rowN - 1;
+    return this.#lastRow = ret;
+  }
+
+  /**
+   * `in( 0 <= row_x && row_x < this.rowN)`
+   * @const
+   * @const @param row_x
+   */
+  #frstVOf(row_x: uint): Visul_ | -1 {
+    return row_x === 0 ? (this.#empty ? -1 : 0) : this.#wrap_a[row_x - 1];
+  }
+  /** @see {@linkcode #frstVOf()} */
+  #lastVOf(row_x: uint): Visul_ | -1 {
+    return this.#wrap_a[row_x] - 1;
+  }
+  /* ~ */
+
+  /* #embedLevels */
+  #embedLevels: GetEmbeddingLevelsR_ | undefined;
+  /**
+   * Shared between `Line.#bidi` and `ELineBase.#bidi`
+   * (@see {@linkcode ELineBase.setBidi$()})
+   */
+  get embedLevels() {
+    return this.#embedLevels ??= getEmbeddingLevels(this.#text, this.#dir);
+  }
+
+  /**
+   * `in( this.#embedLevels)`
+   * @const @param l_x `[ 0, #text.length )`
+   */
+  #lrOf(l_x: loff_t): ChrTyp.R | ChrTyp.L {
+    return (this.#embedLevels!.levels[l_x] & 1) ? ChrTyp.R : ChrTyp.L;
+  }
+  /** @const @param l_x `[ 0, #text.length ]` */
+  #isL(l_x: loff_t) {
+    return l_x === this.#text.length
+      ? this.#lrOf(l_x - 1) === ChrTyp.L
+      : this.#lrOf(l_x) === ChrTyp.L;
+  }
+  /** @const @param l_x `[ 0, #text.length ]` */
+  #isR(l_x: loff_t) {
+    return l_x === this.#text.length
+      ? this.#lrOf(l_x - 1) === ChrTyp.R
+      : this.#lrOf(l_x) === ChrTyp.R;
+  }
+
+  get _lr_a_() {
+    if (!this.#embedLevels) this.validate();
+
+    const ret = new Array<string>(this.#text.length);
+    for (let i = this.#text.length; i--;) {
+      ret[i] = ChrTyp[this.#lrOf(i)];
+    }
+    return ret;
+  }
+  /* ~ */
+
+  /* #visul_a, #lastVisul */
+  #visul_a: loff_t[] | undefined;
+  get _visul_a_() {
+    return this.#visul_a;
+  }
+
+  /**
+  //jjjj TOCLEANUP
+  //  * One logal could map to one or two visul. In case of two, `#lastVisul`
+  //  * specifies the one if it's one of thw two.\
+   * [ 0, #text.length )
+   */
+  #lastVisul: Visul_ | -1 = -1;
+  //jjjj TOCLEANUP
+  // get _lastVisul() {
+  //   return this.#lastVisul;
+  // }
+  #lastRSide = RSide_.midl;
+
+  /**
+   * Use `#lastRSide`\
+   * Use `#lastVisul` if `#lastRSide` is `left` or `rigt`\
+   * Set `#lastVisul`, `#lastRSide`
+   * @const @param l_x `[ 0, #text.length ]`
+  //jjjj TOCLEANUP
+  //  * @const @param row_x
+   */
+  #calcVisul(l_x: loff_t): void {
+    if (!this.#visul_a) this.validate();
+
+    //jjjj TOCLEANUP
+    // return this.#lastVisul = this.#visul_a!.at(l_x) ??
+    //   (this.#rtl ? -1 : this.#text.length);
+    //jjjj TOCLEANUP
+    // return this.#lastVisul = this.#visul_a!.at(l_x) ?? (
+    //   this.#isR(this.#visul_a!.at(-1)!) ? -1 : this.#text.length
+    // );
+    let visul = this.#visul_a!.at(l_x);
+    let rside: RSide_;
+    if (visul === undefined) {
+      /*#static*/ if (INOUT) {
+        // console.log({ l_x });
+        // console.log(`#text: ${this.#text}`);
+        assert(l_x === this.#text.length);
+      }
+      if (this.#lastRSide === RSide_.left || this.#lastRSide === RSide_.rigt) {
+        visul = this.#lastVisul;
+        rside = this.#lastRSide;
+      } else {
+        if (this.#rtl) {
+          visul = this.#frstVOf(this.rowN - 1);
+          rside = RSide_.left;
+        } else {
+          visul = this.#lastVOf(this.rowN - 1);
+          rside = RSide_.rigt;
+        }
+      }
+      // } else {
+      //   rside = this.#lastRSide === RSide_.unknown
+      //     ? RSide_.midl
+      //     : this.#lastRSide;
+    } else {
+      rside = RSide_.midl;
+    }
+    this.#lastVisul = visul;
+    this.#lastRSide = rside;
+
+    //jjjj TOCLEANUP
+    // const b_0 = this.#frstVOf(row_x), b_1 = this.#wrap_a[row_x];
+    // /*#static*/ if (INOUT) {
+    //   assert(b_0 <= l_x && l_x <= b_1);
+    // }
+    // let v_0: loff_t, v_1: loff_t;
+    // if (l_x === b_1) {
+    //   if (l_x > b_0) {
+    //     // v_1 = this.#visul_a![l_x - 1] +
+    //     //   (this.#isR(l_x - 1) ? 0 : 1);
+    //     v_1 = b_1;
+    //   } else {
+    //     v_1 = b_0;
+    //   }
+    //   v_0 = v_1;
+    // } else {
+    //   // v_0 = this.#visul_a![l_x] + (this.#isR(l_x) ? 1 : 0);
+    //   // if (l_x > b_0) {
+    //   //   v_1 = this.#visul_a![l_x - 1] +
+    //   //     (this.#isR(l_x - 1) ? 0 : 1);
+    //   // } else {
+    //   //   v_1 = v_0;
+    //   // }
+    //   v_0 = v_1 = this.#visul_a![l_x];
+    // }
+    // if (v_0 === v_1) {
+    //   this.#lastVisul = v_0;
+    // } else if (v_0 !== this.#lastVisul && v_1 !== this.#lastVisul) {
+    //   /* The right one takes the precedence. */
+    //   this.#lastVisul = Math.max(v_0, v_1);
+    // }
+    // return this.#lastVisul;
+  }
+  /* ~ */
+
+  /* #logal_a, #lastLogal */
+  #logal_a: loff_t[] | undefined;
+  get _logal_a_() {
+    return this.#logal_a;
+  }
+  get valid() {
+    return !!this.#logal_a;
+  }
+
+  /**
+  //jjjj TOCLEANUP
+  //  * One visul could map to one or two logal. In case of two, `#lastLogal`
+  //  * specifies the one if it's one of thw two.\
+   * `[ 0, #text.length ]`
+   */
+  #lastLogal: loff_t | -1 = -1;
+  get lastLogal() {
+    return this.#lastLogal;
+  }
+
+  /**
+   * Use `#lastVisul`, `#lastRSide`\
+   * Set `#lastLogal`
+   * @return `#lastLogal`
+   */
+  #calcLogal(): loff_t {
+    if (!this.#logal_a) this.validate();
+
+    //jjjj TOCLEANUP
+    // return this.#logal_a![v_x] ?? (
+    //   this.#rtl
+    //     ? (v_x === -1 ? this.#text.length : 0)
+    //     : (v_x === -1 ? 0 : this.#text.length)
+    // );
+    //jjjj TOCLEANUP
+    // /*! Since `v_x` can be `-1`, do not use`.at(v_x)`. */
+    // return this.#logal_a![v_x] ?? (
+    //   v_x === -1
+    //     ? (this.#isR(this.#logal_a![0]) ? this.#text.length : 0)
+    //     : (this.#isR(this.#logal_a!.at(-1)!)
+    //       ? 0
+    //       : this.#text.length)
+    // );
+
+    //jjjj TOCLEANUP
+    // if (
+    //   this.#lastRow === this.rowN - 1 &&
+    //   v_x === this.#frstVOf(this.#lastRow) - 1
+    // ) {
+    //   const logal = this.#logal_a![this.#frstVOf(this.#lastRow)];
+    //   return this.#isR(logal) ? this.#text.length : this.#logal_a![v_x] ?? 0;
+    // }
+
+    // /*#static*/ if (INOUT) {
+    //   assert(v_x !== -1);
+    // }
+    // return this.#logal_a!.at(v_x) ?? (
+    //   this.#isR(this.#logal_a!.at(-1)!) ? 0 : this.#text.length
+    // );
+
+    const logal = this.#logal_a![this.#lastVisul];
+    if (this.#lastRSide === RSide_.left && this.#ltr) {
+      this.#lastLogal = this.#isR(logal) ? this.#text.length : 0;
+    } else if (this.#lastRSide === RSide_.rigt && this.#rtl) {
+      this.#lastLogal = this.#isL(logal) ? this.#text.length : 0;
+    } else {
+      this.#lastLogal = this.#lastRSide === RSide_.midl
+        ? logal
+        : this.#text.length;
+    }
+    return this.#lastLogal;
+
+    //jjjj TOCLEANUP
+    // const logal = this.#logal_a![this.#lastVisul];
+    // this.#lastLogal = /* final switch */ ({
+    //   [RSide_.midl]: () => logal,
+    //   [RSide_.rigt]: () => {
+    //     let vi = this.#lastVOf(this.#lastRow);
+    //     /*#static*/ if (INOUT) {
+    //       assert(logal === this.#logal_a![vi] && this.#isL(logal));
+    //     }
+    //     if (this.#ltr) return this.#text.length;
+
+    //     vi -= 1;
+    //     const viI = this.#frstVOf(this.#lastRow);
+    //     for (; vi >= viI && this.#isL(this.#logal_a![vi]); vi--);
+    //     return vi < viI ? this.#text.length : this.#logal_a![vi];
+    //   },
+    //   [RSide_.left]: () => {
+    //     let vi = this.#frstVOf(this.#lastRow);
+    //     /*#static*/ if (INOUT) {
+    //       assert(logal === this.#logal_a![vi] && this.#isR(logal));
+    //     }
+    //     if (this.#rtl) return this.#text.length;
+
+    //     vi += 1;
+    //     const viI = this.#lastVOf(this.#lastRow);
+    //     for (; vi <= viI && this.#isR(this.#logal_a![vi]); vi++);
+    //     return vi > viI ? this.#text.length : this.#logal_a![vi];
+    //   },
+    //   [RSide_.unknown]: () => {
+    //     /*#static*/ DEBUG ? fail("Should not run here!") : {};
+    //   },
+    // }[this.#lastRSide])();
+
+    //jjjj TOCLEANUP
+    // const ret = new Array(2) as [loff_t, loff_t];
+    // const b_0 = this.#frstVOf(row_x), b_1 = this.#wrap_a[row_x];
+    // /*#static*/ if (INOUT) {
+    //   assert(b_0 <= v_x && v_x <= b_1);
+    // }
+    // let l_: loff_t;
+    // if (v_x === b_1) {
+    //   // if (v_x > b_0) {
+    //   //   // l_ = this.#logal_a![v_x - 1];
+    //   //   // ret[0] = l_ + (this.#isR(l_) ? 0 : 1);
+    //   //   ret[0] = this.#logal_a![v_x - 1];
+    //   // } else {
+    //   //   ret[0] = b_0;
+    //   // }
+    //   if (row_x + 1 < this.rowN) {
+    //     this.#calcLogal(v_x, row_x + 1);
+    //     ret[0] = this.#lastLogal;
+    //   } else {
+    //     ret[0] = this.#text.length;
+    //   }
+    //   ret[1] = ret[0];
+    // } else {
+    //   // l_ = this.#logal_a![v_x];
+    //   // ret[1] = l_ + (this.#isR(l_) ? 1 : 0);
+    //   // if (v_x > b_0) {
+    //   //   l_ = this.#logal_a![v_x - 1];
+    //   //   ret[0] = l_ + (this.#isR(l_) ? 0 : 1);
+    //   // } else {
+    //   //   ret[0] = ret[1];
+    //   // }
+    //   ret[1] = ret[0] = this.#logal_a![v_x];
+    // }
+    // return ret;
+  }
+  /* ~ */
+  /*49|||||||||||||||||||||||||||||||||||||||||||*/
+
+  /* bidiLastCont_ts */
+  #bidiLastCont_ts = 0 as Ts_t;
+  /** last content timestamp */
+  get bidiLastCont_ts() {
+    return this.#bidiLastCont_ts;
+  }
+  #updateBidiLastContTs(): Ts_t {
+    return this.#bidiLastCont_ts = Date.now_1() as Ts_t;
+  }
+  /* ~ */
+
+  /**
+   * @const @param text_x
+   * @const @param dir_x
+   * @const @param wrap_a_x
+   * @const @param embedLevels_x
+   */
+  reset_Bidi(
+    text_x: string,
+    dir_x: BufrDir,
+    wrap_a_x = [text_x.length],
+    embedLevels_x?: GetEmbeddingLevelsR_,
+  ): this {
+    this.#text = text_x;
+    this.#dir = dir_x;
+    // console.log({ dir_x });
+    this.#wrap_a = wrap_a_x;
+    this.#embedLevels = embedLevels_x;
+
+    this.#rowN = undefined;
+    this.#visul_a = undefined;
+    this.#logal_a = undefined;
+
+    this.#updateBidiLastContTs();
+    return this;
+  }
+  /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+
+  /** Set `#embedLevels`, `#logal_a`, `#visul_a` */
+  @traceOut(_TRACE)
+  validate(): this {
+    /*#static*/ if (_TRACE) {
+      console.log(`${trace.indent}>>>>>>> Bidi_${this.id}.validate() >>>>>>>`);
+    }
+    if (this.valid) return this;
+
+    const LEN = this.#wrap_a.at(-1)!;
+    /*#static*/ if (INOUT) {
+      assert(LEN === this.#text.length);
+    }
+    this.#embedLevels ??= getEmbeddingLevels(this.#text, this.#dir);
+    //jjjj TOCLEANUP
+    // this.#logal_a = new Array(LEN);
+    // this.#visul_a = new Array(LEN);
+    this.#logal_a = Array.sparse<loff_t>(LEN);
+    this.#visul_a = Array.sparse<loff_t>(LEN);
+    if (LEN) {
+      let i_ = 0;
+      for (const iI of this.#wrap_a) {
+        /*#static*/ if (INOUT) {
+          assert(i_ < iI);
+        }
+        getReorderedIndices(
+          this.#text,
+          this.#embedLevels,
+          i_,
+          iI,
+          this.#logal_a,
+        );
+        for (let j = i_; j < iI; ++j) {
+          this.#visul_a[this.#logal_a![j]] = j;
+        }
+        i_ = iI;
+      }
+    }
+    // /*#static*/ if (_TRACE) {
+    //   console.log(`${trace.dent}`, [...this.#text]);
+    //   console.log(`${trace.dent}#wrap_a: [${this.#wrap_a}]`);
+    //   console.log(
+    //     `${trace.dent}#embedLevels.levels: [${this.#embedLevels.levels}]`,
+    //   );
+    //   console.log(`${trace.dent}_lr_a_: [${this._lr_a_}]`);
+    //   console.log(`${trace.dent}#visul_a: [${this.#visul_a}]`);
+    //   console.log(`${trace.dent}#logal_a: [${this.#logal_a}]`);
+    // }
+    return this;
+  }
+
+  //jjjj TOCLEANUP
+  // /**
+  //  * Set `#lastVisul`, `#lastLogal`
+  //  * @const @param v_x
+  // //jjjj TOCLEANUP
+  // //  * @const @param row_x
+  //  * @return `#lastLogal`
+  //  */
+  // #visulFar(v_x: Visul_): loff_t {
+  //   this.#lastVisul = v_x;
+  //   this.#lastLogal = this.#calcLogal();
+  //   //jjjj TOCLEANUP
+  //   // const [l_0, l_1] = this.#calcLogal(v_x, row_x);
+  //   // if (l_0 === l_1) {
+  //   //   this.#lastLogal = l_0;
+  //   // } else if (l_0 !== this.#lastLogal && l_1 !== this.#lastLogal) {
+  //   //   /* The right one takes the precedence */
+  //   //   this.#lastLogal = Math.max(l_0, l_1);
+  //   // }
+  //   return this.#lastLogal;
+  // }
+  /**
+   * Set `#lastRow`, `#lastVisul`, `#lastRSide`, `#lastLogal`
+   * @const @param row_x `[ 0, rowN )`
+   * @return `#lastLogal`
+   */
+  visulFarleften(row_x = this.#rtl ? this.rowN - 1 : 0): loff_t {
+    if (!this.#logal_a) this.validate();
+
+    this.#lastRow = row_x;
+    //jjjj TOCLEANUP
+    // return this.#visulFar(
+    //   row_x === this.rowN - 1 && this.#isR(this.#logal_a!.at(-1)!)
+    //     ? this.#frstVOf(row_x) - 1
+    //     : this.#frstVOf(row_x),
+    // );
+    this.#lastVisul = this.#frstVOf(row_x);
+    if (this.#lastVisul === -1) {
+      this.#lastRSide = RSide_.left;
+      return this.#lastLogal = 0;
+    }
+
+    //jjjj TOCLEANUP
+    // this.#lastRSide =
+    //   row_x === this.rowN - 1 && this.#isR(this.#logal_a![this.#lastVisul])
+    //     ? RSide_.left
+    //     : RSide_.midl;
+    if (
+      //jjjj TOCLEANUP
+      // this.#isR(this.#logal_a![this.#lastVisul]) &&
+      (row_x === 0 && this.#ltr || row_x === this.rowN - 1 && this.#rtl)
+    ) {
+      this.#lastRSide = RSide_.left;
+    } else {
+      this.#lastRSide = RSide_.midl;
+    }
+    return this.#calcLogal();
+  }
+  /** @see {@linkcode visulFarleften()} */
+  visulFarrigten(row_x = this.#rtl ? 0 : this.rowN - 1): loff_t {
+    if (!this.#logal_a) this.validate();
+
+    this.#lastRow = row_x;
+    //jjjj TOCLEANUP
+    // return this.#visulFar(
+    //   row_x === this.rowN - 1 && this.#isL(this.#logal_a!.at(-1)!)
+    //     ? this.#wrap_a[row_x]
+    //     : this.#wrap_a[row_x] - 1,
+    // );
+    this.#lastVisul = this.#lastVOf(row_x);
+    if (this.#lastVisul === -1) {
+      this.#lastRSide = RSide_.rigt;
+      return this.#lastLogal = 0;
+    }
+
+    //jjjj TOCLEANUP
+    // this.#lastRSide =
+    //   row_x === this.rowN - 1 && this.#isL(this.#logal_a![this.#lastVisul])
+    //     ? RSide_.rigt
+    //     : RSide_.midl;
+    if (
+      //jjjj TOCLEANUP
+      // this.#isL(this.#logal_a![this.#lastVisul]) &&
+      (row_x === 0 && this.#rtl || row_x === this.rowN - 1 && this.#ltr)
+    ) {
+      this.#lastRSide = RSide_.rigt;
+    } else {
+      this.#lastRSide = RSide_.midl;
+    }
+    return this.#calcLogal();
+  }
+
+  /**
+   * Set `#lastVisul`, `#lastRSide`, `#lastRow`, `#lastLogal`
+   * @const @param l_x `[ 0, #text.length ]`
+   * @return effective or not
+  //jjjj TOCLEANUP
+  //  *    Not check whether `#lastLogal`, `#lastVisul`, `#lastRow` are changed,
+  //  *    because there are effective cases but all of them are unchanged.
+   */
+  visulLeften(l_x: loff_t): boolean {
+    //jjjj TOCLEANUP
+    // assert(--valve_x, "Cycle call!");
+    this.#calcVisul(l_x);
+    const row = this.rowOf();
+    if (
+      this.#lastVisul === this.#frstVOf(row) &&
+      (this.#lastRSide !== RSide_.rigt || this.#empty)
+    ) {
+      if (this.#rtl) {
+        if (row === this.rowN - 1) {
+          //jjjj TOCLEANUP
+          // if (this.#lastLogal === this.#text.length) {
+          //   return false;
+          // } else {
+          //   this.#lastLogal = this.#text.length;
+          //   return true;
+          // }
+          return this.#lastLogal !== this.visulFarleften(row);
+        } else {
+          this.visulFarrigten(row + 1);
+          //jjjj TOCLEANUP
+          // this.visulLeften(this.#lastLogal, valve_x);
+          return true;
+        }
+      } else {
+        if (row === 0) {
+          return this.#lastLogal !== this.visulFarleften(0);
+        } else {
+          this.visulFarrigten(row - 1);
+          //jjjj TOCLEANUP
+          // this.visulLeften(this.#lastLogal, valve_x);
+          return true;
+        }
+      }
+    }
+
+    //jjjj TOCLEANUP
+    // let [l_0, l_1] = this.#calcLogal(this.#lastVisul, row);
+    // if (l_0 === l_1 || l_0 === this.#lastLogal) {
+    //   this.#lastVisul -= 1;
+    //   [l_0, l_1] = this.#calcLogal(this.#lastVisul, row);
+    //   this.#lastLogal = l_1;
+    // } else {
+    //   this.#lastLogal = l_0;
+    // }
+    //jjjj TOCLEANUP
+    // if (this.#lastVisul > -1) --this.#lastVisul;
+    if (this.#lastRSide === RSide_.rigt) {
+      this.#lastVisul = this.#lastVOf(row);
+      this.#lastRSide = RSide_.midl;
+    } else if (this.#lastRSide === RSide_.midl) {
+      this.#lastVisul -= 1;
+    }
+    return this.#lastLogal !== this.#calcLogal();
+  }
+  /** @see {@linkcode visulLeften()} */
+  visulRigten(l_x: loff_t): boolean {
+    //jjjj TOCLEANUP
+    // assert(--valve_x, "Cycle call!");
+    this.#calcVisul(l_x);
+    const row = this.rowOf();
+    if (
+      this.#lastVisul === this.#lastVOf(row) &&
+      (this.#lastRSide !== RSide_.left || this.#empty)
+    ) {
+      if (this.#ltr) {
+        if (row === this.rowN - 1) {
+          //jjjj TOCLEANUP
+          // if (this.#lastLogal === this.#text.length) {
+          //   return false;
+          // } else {
+          //   this.#lastLogal = this.#text.length;
+          //   return true;
+          // }
+          return this.#lastLogal !== this.visulFarrigten(row);
+        } else {
+          this.visulFarleften(row + 1);
+          //jjjj TOCLEANUP
+          // this.visulRigten(this.#lastLogal, valve_x);
+          return true;
+        }
+      } else {
+        if (row === 0) {
+          return this.#lastLogal !== this.visulFarrigten(0);
+        } else {
+          this.visulFarleften(row - 1);
+          //jjjj TOCLEANUP
+          // this.visulRigten(this.#lastLogal, valve_x);
+          return true;
+        }
+      }
+    }
+
+    //jjjj TOCLEANUP
+    // let [l_0, l_1] = this.#calcLogal(this.#lastVisul, row);
+    // if (l_0 === l_1 || l_1 === this.#lastLogal) {
+    //   this.#lastVisul += 1;
+    //   [l_0, l_1] = this.#calcLogal(this.#lastVisul, row);
+    //   this.#lastLogal = l_0;
+    // } else {
+    //   this.#lastLogal = l_1;
+    // }
+    //jjjj TOCLEANUP
+    // if (this.#lastVisul < this.#text.length) ++this.#lastVisul;
+    if (this.#lastRSide === RSide_.left) {
+      this.#lastVisul = this.#frstVOf(row);
+      this.#lastRSide = RSide_.midl;
+    } else if (this.#lastRSide === RSide_.midl) {
+      this.#lastVisul += 1;
+    }
+    return this.#lastLogal !== this.#calcLogal();
+  }
+
+  /** @const @param l_x */
+  update(l_x: loff_t) {
+    //jjjj TOCLEANUP
+    // this.#lastRSide = RSide_.midl;
+    this.#calcVisul(l_x);
+    this.rowOf();
+    this.#calcLogal();
+  }
+  /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+
+  get _last_(): string {
+    return [
+      `v:${this.#lastVisul}(${RSide_[this.#lastRSide]})`,
+      `r:${this.#lastRow}`,
+      `l:${this.#lastLogal}`,
+    ].join(",");
+  }
+}
+/*80--------------------------------------------------------------------------*/
+
+export type Bidir = {
+  readonly bidi: Bidi;
+};
+/*80--------------------------------------------------------------------------*/

@@ -1,0 +1,34 @@
+#data
+<p><b id=a><b id=a><b id=a><b><object><b id=a><b id=a>X</object><p>Y
+#errors
+(1,3): expected-doctype-but-got-start-tag
+(1,64): end-tag-too-early
+(1,67): unexpected-end-tag
+(1,68): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <p>
+|       <b>
+|         id="a"
+|         <b>
+|           id="a"
+|           <b>
+|             id="a"
+|             <b>
+|               <object>
+|                 <b>
+|                   id="a"
+|                   <b>
+|                     id="a"
+|                     "X"
+|     <p>
+|       <b>
+|         id="a"
+|         <b>
+|           id="a"
+|           <b>
+|             id="a"
+|             <b>
+|               "Y"

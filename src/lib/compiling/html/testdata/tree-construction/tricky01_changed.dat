@@ -1,0 +1,260 @@
+#data
+<b><p>Bold </b> Not bold</p>
+Also not bold.
+#errors
+(1,3): expected-doctype-but-got-start-tag
+(1,15): adoption-agency-1.3
+#document
+| <html>
+|   <head>
+|   <body>
+|     <b>
+|     <p>
+|       <b>
+|         "Bold "
+|       " Not bold"
+|     "\nAlso not bold."
+
+#data
+<html>
+<code color=red><i>Italic and Red<p>Italic and Red </code> Just italic.</p> Italic only.</i> Plain
+<p>I should not be red. <code color=red>Red. <i>Italic and red.</p>
+<p>Italic and red. </i> Red.</code> I should not be red.</p>
+<b>Bold <i>Bold and italic</b> Only Italic </i> Plain
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(2,58): adoption-agency-1.3
+(3,67): unexpected-end-tag
+(4,23): adoption-agency-1.3
+(4,35): adoption-agency-1.3
+(5,30): adoption-agency-1.3
+#document
+| <html>
+|   <head>
+|   <body>
+|     <code>
+|       color="red"
+|       <i>
+|         "Italic and Red"
+|     <i>
+|       <p>
+|         <code>
+|           color="red"
+|           "Italic and Red "
+|         " Just italic."
+|       " Italic only."
+|     " Plain\n"
+|     <p>
+|       "I should not be red. "
+|       <code>
+|         color="red"
+|         "Red. "
+|         <i>
+|           "Italic and red."
+|     <code>
+|       color="red"
+|       <i>
+|         "\n"
+|     <p>
+|       <code>
+|         color="red"
+|         <i>
+|           "Italic and red. "
+|         " Red."
+|       " I should not be red."
+|     "\n"
+|     <b>
+|       "Bold "
+|       <i>
+|         "Bold and italic"
+|     <i>
+|       " Only Italic "
+|     " Plain"
+
+#data
+<html><body>
+<p><code size="7">First paragraph.</p>
+<p>Second paragraph.</p></code>
+<b><p><i>Bold and Italic</b> Italic</p>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(2,38): unexpected-end-tag
+(4,28): adoption-agency-1.3
+(4,28): adoption-agency-1.3
+(4,39): unexpected-end-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     "\n"
+|     <p>
+|       <code>
+|         size="7"
+|         "First paragraph."
+|     <code>
+|       size="7"
+|       "\n"
+|       <p>
+|         "Second paragraph."
+|     "\n"
+|     <b>
+|     <p>
+|       <b>
+|         <i>
+|           "Bold and Italic"
+|       <i>
+|         " Italic"
+
+#data
+<html>
+<dl>
+<dt><b>Boo
+<dd>Goo?
+</dl>
+</html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(4,4): end-tag-too-early
+(5,5): end-tag-too-early
+(6,7): expected-one-end-tag-but-got-another
+#document
+| <html>
+|   <head>
+|   <body>
+|     <dl>
+|       "\n"
+|       <dt>
+|         <b>
+|           "Boo\n"
+|       <dd>
+|         <b>
+|           "Goo?\n"
+|     <b>
+|       "\n"
+
+#data
+<html><body>
+<label><a><div>Hello<div>World</div></a></label>  
+</body></html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(2,40): adoption-agency-1.3
+(2,48): unexpected-end-tag
+(3,7): expected-one-end-tag-but-got-another
+#document
+| <html>
+|   <head>
+|   <body>
+|     "\n"
+|     <label>
+|       <a>
+|       <div>
+|         <a>
+|           "Hello"
+|           <div>
+|             "World"
+|         "  \n"
+
+#data
+<table><blockquote> <code>a</blockquote> <img> <tr><td> </td> </tr> </table>
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,19): unexpected-start-tag-implies-table-voodoo
+(1,20): unexpected-character-implies-table-voodoo
+(1,26): unexpected-start-tag-implies-table-voodoo
+(1,27): unexpected-character-implies-table-voodoo
+(1,40): unexpected-end-tag-implies-table-voodoo
+(1,40): end-tag-too-early
+(1,46): unexpected-start-tag-implies-table-voodoo
+(1,47): unexpected-character-implies-table-voodoo
+#document
+| <html>
+|   <head>
+|   <body>
+|     <blockquote>
+|       " "
+|       <code>
+|         "a"
+|     <code>
+|       <img>
+|       " "
+|     <table>
+|       " "
+|       <tbody>
+|         <tr>
+|           <td>
+|             " "
+|           " "
+|         " "
+
+#data
+<table><tr><p><a><p>You should see this text.
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(1,14): unexpected-start-tag-implies-table-voodoo
+(1,17): unexpected-start-tag-implies-table-voodoo
+(1,20): unexpected-start-tag-implies-table-voodoo
+(1,20): unexpected-end-tag
+(1,45): unexpected-character-implies-table-voodoo
+(1,45): eof-in-table
+#document
+| <html>
+|   <head>
+|   <body>
+|     <p>
+|       <a>
+|     <p>
+|       <a>
+|         "You should see this text."
+|     <table>
+|       <tbody>
+|         <tr>
+
+#data
+<TABLE>
+<TR>
+<BLOCKQUOTE><BLOCKQUOTE><TD></TD></TR><TR>
+<CODE>
+<TABLE><tr></tr></TABLE>
+</P>
+<a></code><code></a>
+This page contains an insanely badly-nested tag sequence.
+#errors
+(1,7): expected-doctype-but-got-start-tag
+(3,12): unexpected-start-tag-implies-table-voodoo
+(3,24): unexpected-start-tag-implies-table-voodoo
+(4,6): unexpected-start-tag-implies-table-voodoo
+(5,0): unexpected-character-implies-table-voodoo
+(5,7): unexpected-start-tag-implies-end-tag
+(6,4): unexpected-end-tag
+(7,10): adoption-agency-1.3
+(7,20): adoption-agency-1.3
+(8,57): expected-closing-tag-but-got-eof
+#document
+| <html>
+|   <head>
+|   <body>
+|     <blockquote>
+|       <blockquote>
+|     <code>
+|       "\n"
+|     <table>
+|       "\n"
+|       <tbody>
+|         <tr>
+|           "\n"
+|           <td>
+|         <tr>
+|           "\n"
+|     <table>
+|       <tbody>
+|         <tr>
+|     <code>
+|       "\n"
+|       <p>
+|       "\n"
+|       <a>
+|     <a>
+|       <code>
+|     <code>
+|       "\nThis page contains an insanely badly-nested tag sequence."

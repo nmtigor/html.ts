@@ -1,0 +1,85 @@
+#data
+<html><ruby>a<rt>b<rt></ruby></html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <ruby>
+|       "a"
+|       <rt>
+|         "b"
+|       <rt>
+
+#data
+<html><ruby>a<rt>b<rp></ruby></html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <ruby>
+|       "a"
+|       <rt>
+|         "b"
+|       <rp>
+
+#data
+<html><ruby>a<rt>b<span></ruby></html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,31): unexpected-end-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <ruby>
+|       "a"
+|       <rt>
+|         "b"
+|         <span>
+
+#data
+<html><ruby>a<rp>b<rt></ruby></html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <ruby>
+|       "a"
+|       <rp>
+|         "b"
+|       <rt>
+
+#data
+<html><ruby>a<rp>b<rp></ruby></html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <ruby>
+|       "a"
+|       <rp>
+|         "b"
+|       <rp>
+
+#data
+<html><ruby>a<rp>b<span></ruby></html>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,31): unexpected-end-tag
+#document
+| <html>
+|   <head>
+|   <body>
+|     <ruby>
+|       "a"
+|       <rp>
+|         "b"
+|         <span>

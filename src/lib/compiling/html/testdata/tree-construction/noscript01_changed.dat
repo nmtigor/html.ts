@@ -1,0 +1,224 @@
+#data
+<head><noscript><!doctype html><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,31): unexpected-doctype
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript><html class="foo"><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,34): non-html-root
+#script-off
+#document
+| <html>
+|   class="foo"
+|   <head>
+|     <noscript>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|   <body>
+
+#data
+<head><noscript>   </noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       "   "
+|   <body>
+
+#data
+<head><noscript><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript><link><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <link>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript><link><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <link>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript><link><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <link>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript><meta><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <meta>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript><style>XXX</style></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <style>
+|         "XXX"
+|   <body>
+
+#data
+<head><noscript></br><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,21): unexpected-inhead-noscript-tag
+(1,21): unexpected-end-tag-treated-as
+(1,42): unexpected-end-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|   <body>
+|     <br>
+|     <!-- foo -->
+
+#data
+<head><noscript><head class="foo"><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,34): unexpected-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript><noscript class="foo"><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,38): unexpected-start-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript></p><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,20): unexpected-end-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|       <!-- foo -->
+|   <body>
+
+#data
+<head><noscript><p><!--foo--></noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,19): unexpected-inhead-noscript-tag
+(1,40): unexpected-end-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|   <body>
+|     <p>
+|       <!-- foo -->
+
+#data
+<head><noscript>XXX<!--foo--></noscript></head>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,19): char-in-head-noscript
+(1,40): unexpected-end-tag
+(1,47): unexpected-end-tag
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|   <body>
+|     "XXX"
+|     <!-- foo -->
+
+#data
+<head><noscript>
+#errors
+(1,6): expected-doctype-but-got-start-tag
+(1,16): eof-in-head-noscript
+#script-off
+#document
+| <html>
+|   <head>
+|     <noscript>
+|   <body>

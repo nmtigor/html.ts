@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "description": "<a//>",
+      "input": "<a//>",
+      "output": [["StartTag", "a", {}, true]],
+      "errors": [
+        { "code": "unexpected-solidus-in-tag", "line": 1, "col": 4 }
+      ]
+    }
+  ]
+}
