@@ -71,7 +71,10 @@ export class Doment extends HTMLSn {
   constructor(phTk_x: HTMLTk) {
     super();
     this.snt_a_$.push(phTk_x);
-    phTk_x.htmlSn_$ = this;
+    //jjjj TOCLEANUP
+    // phTk_x.htmlSn_$ = this;
+
+    this.ensureBdries();
   }
   /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 

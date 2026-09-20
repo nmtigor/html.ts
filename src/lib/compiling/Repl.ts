@@ -282,7 +282,7 @@ export class Repl {
           .setByRanval((inRv_x as Ranval[])[i]);
         inRan_a[i].syncRanval_$(); //!
         /*#static*/ if (INOUT) {
-          if (inRan_a.at(i + 1)) inRan_a[i].posS(inRan_a[i + 1]);
+          if (inRan_a.at(i + 1)) inRan_a[i].posSe(inRan_a[i + 1]);
         }
       }
     } else {

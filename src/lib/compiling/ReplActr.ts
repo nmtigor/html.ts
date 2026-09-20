@@ -43,10 +43,8 @@ export class ReplActr {
                 /*#static*/ if (INOUT) {
                   assert(this.#bufr.oldRan_a_$.at(0));
                 }
-                this.#lexr?.lexMrk_$(this.#bufr.oldRan_a_$);
-                //jjjj TOCLEANUP
-                // this.#pazr?.pazMrk_$();
-                this.#pazr?.pazPremrk_$();
+                this.#lexr?.lexMrk_$();
+                this.#pazr?.pazPremrk_$().pazMrk_$();
                 //jjjj TOCLEANUP
                 // this.#tfmr?.tfmmrk_$(this.#bufr.oldRan_a_$);
               },
@@ -61,18 +59,10 @@ export class ReplActr {
                 /*#static*/ if (INOUT) {
                   assert(this.#bufr.newRan_a_$.at(0));
                 }
-                this.#lexr
-                  ?.lexAdj_$(this.#bufr.newRan_a_$)
-                  .lex();
+                this.#lexr?.lexAdj_$().lex();
+                this.#pazr?.paz();
                 //jjjj TOCLEANUP
-                // this.#pazr?.paz();
-                this.#pazr
-                  ?.pazMrk_$()
-                  .paz();
-                //jjjj TOCLEANUP
-                // this.#tfmr
-                //   ?.tfmadj_$(this.#bufr.newRan_a_$)
-                //   .tfm();
+                // this.#tfmr?.tfmadj_$(this.#bufr.newRan_a_$).tfm();
               },
               target: "sufRepl",
             },

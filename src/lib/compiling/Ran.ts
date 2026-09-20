@@ -309,7 +309,7 @@ export class Ran {
    * @primaryconst
    * @primaryconst @param rhs_x
    */
-  posS(rhs_x: Ran): boolean {
+  posSe(rhs_x: Ran): boolean {
     return this !== rhs_x && this.stopLoc$.posSE(rhs_x.strtLoc$);
   }
   /**
@@ -319,6 +319,13 @@ export class Ran {
   posE(rhs_x: Ran): boolean {
     return this === rhs_x ||
       this.strtLoc$.posE(rhs_x.strtLoc$) && this.stopLoc$.posE(rhs_x.stopLoc$);
+  }
+  /**
+   * @primaryconst
+   * @primaryconst @param rhs_x
+   */
+  posS(rhs_x: Ran): boolean {
+    return !this.posE(rhs_x) && this.stopLoc$.posSE(rhs_x.strtLoc$);
   }
 
   /**

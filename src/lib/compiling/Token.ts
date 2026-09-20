@@ -3,7 +3,6 @@
  * @license MIT
  ******************************************************************************/
 
-import { g_eran_fac } from "@fe-edt/ERan.ts";
 import type { ERan, ERanr } from "@fe-edt/ERan.ts";
 import * as v from "@valibot/valibot";
 import { DEBUG, INOUT, PRF } from "../../preNs.ts";
@@ -70,12 +69,16 @@ export class Token<T extends Tok = BaseTok> extends Snt {
   //   this.syncRanval();
   // }
 
-  saveRanval_$() {
+  _saveRvTurn_ = 0;
+  /** @const @param turn_x */
+  _saveRanval_(turn_x: uint) {
     //jjjj TOCLEANUP
     // this.syncRanval();
 
     this.#oldRanval ??= new Ranval(0, 0);
     this.#oldRanval.become_Array(this.ran_$.ranval);
+
+    this._saveRvTurn_ = turn_x;
   }
   /* ~ */
 
@@ -230,10 +233,12 @@ export class Token<T extends Tok = BaseTok> extends Snt {
   /* ~ */
 
   prevToken_$: Token<T> | undefined;
+  /** @final */
   get prevToken() {
     return this.prevToken_$;
   }
   nextToken_$: Token<T> | undefined;
+  /** @final */
   get nextToken() {
     return this.nextToken_$;
   }
@@ -365,27 +370,71 @@ export class Token<T extends Tok = BaseTok> extends Snt {
    * @primaryconst
    * @primaryconst @param rhs_x
    */
-  posS(rhs_x: Token<T>): boolean {
-    return this.ran_$.posS(rhs_x.ran_$);
-  }
-  /** @see {@linkcode posS()} */
-  posGE(rhs_x: Token<T>): boolean {
-    return !this.posS(rhs_x);
-  }
-  /** @see {@linkcode posS()} */
-  posSE(rhs_x: Token<T>): boolean {
-    return this.posS(rhs_x) || this.posE(rhs_x);
-  }
-  /** @see {@linkcode posS()} */
-  posG(rhs_x: Token<T>): boolean {
-    return !this.posSE(rhs_x);
+  #posSe_impl(rhs_x: Token<T>): boolean {
+    return this.ran_$.posSe(rhs_x.ran_$);
   }
   /**
    * @const
    * @const @param rhs_x
    */
-  posE(rhs_x: Token<T>): boolean {
+  #posE_impl(rhs_x: Token<T>): boolean {
     return this.ran_$.posE(rhs_x.ran_$);
+  }
+  /**
+   * @primaryconst
+   * @primaryconst @param rhs_x
+   */
+  #posS_impl(rhs_x: Token<T>): boolean {
+    return this.ran_$.posS(rhs_x.ran_$);
+  }
+
+  /**
+   * @primaryconst
+   * @primaryconst @param rhs_x
+   */
+  posSe(rhs_x: Token<T> | undefined): boolean {
+    if (rhs_x === undefined) return false;
+
+    return this.#posSe_impl(rhs_x);
+  }
+  /** @see {@linkcode posSe()} */
+  posGe(rhs_x: Token<T> | undefined): boolean {
+    if (rhs_x === undefined) return false;
+
+    return rhs_x.#posSe_impl(this);
+  }
+  /**
+   * @const
+   * @const @param rhs_x
+   */
+  posE(rhs_x: Token<T> | undefined): boolean {
+    if (rhs_x === undefined) return false;
+
+    return this.#posE_impl(rhs_x);
+  }
+  /** @see {@linkcode posSe()} */
+  posSE(rhs_x: Token<T> | undefined): boolean {
+    if (rhs_x === undefined) return false;
+
+    return this.#posSe_impl(rhs_x) || this.#posE_impl(rhs_x);
+  }
+  /** @see {@linkcode posSe()} */
+  posGE(rhs_x: Token<T> | undefined): boolean {
+    if (rhs_x === undefined) return false;
+
+    return rhs_x.#posSe_impl(this) || this.#posE_impl(rhs_x);
+  }
+  /** @see {@linkcode posSe()} */
+  posS(rhs_x: Token<T> | undefined): boolean {
+    if (rhs_x === undefined) return false;
+
+    return this.#posS_impl(rhs_x);
+  }
+  /** @see {@linkcode posSe()} */
+  posG(rhs_x: Token<T> | undefined): boolean {
+    if (rhs_x === undefined) return false;
+
+    return rhs_x.#posS_impl(this);
   }
 
   // /**
@@ -660,7 +709,7 @@ export class Token<T extends Tok = BaseTok> extends Snt {
   linkPrev(retTk_x: Token<T>): Token<T> {
     /*#static*/ if (INOUT) {
       assert(retTk_x !== this);
-      assert(retTk_x.posS(this));
+      assert(retTk_x.posSe(this));
     }
     if (this.prevToken_$ !== retTk_x) {
       retTk_x.#unlinkNext();
@@ -696,7 +745,7 @@ export class Token<T extends Tok = BaseTok> extends Snt {
   linkNext(retTk_x: Token<T>): Token<T> {
     /*#static*/ if (INOUT) {
       assert(retTk_x !== this);
-      assert(this.posS(retTk_x));
+      assert(this.posSe(retTk_x));
     }
     if (this.nextToken_$ !== retTk_x) {
       retTk_x.#unlinkPrev();
@@ -754,7 +803,7 @@ export class Token<T extends Tok = BaseTok> extends Snt {
   insPrev<K extends Token<T>>(retTk_x: K): K {
     /*#static*/ if (INOUT) {
       assert(retTk_x !== this as Token<T>);
-      assert(retTk_x.posS(this));
+      assert(retTk_x.posSe(this));
     }
     if (this.prevToken_$) {
       this.prevToken_$.nextToken_$ = retTk_x;
@@ -769,7 +818,7 @@ export class Token<T extends Tok = BaseTok> extends Snt {
   insNext<K extends Token<T>>(retTk_x: K): K {
     /*#static*/ if (INOUT) {
       assert(retTk_x !== this as Token<T>);
-      assert(this.posS(retTk_x));
+      assert(this.posSe(retTk_x));
     }
     if (this.nextToken_$) {
       this.nextToken_$.prevToken_$ = retTk_x;
@@ -832,7 +881,11 @@ export class Token<T extends Tok = BaseTok> extends Snt {
     const rv_ = this.#oldRanval ?? this.ran_$.rv;
     return {
       sort: [rv_.anchrLidx, rv_.anchrLoff],
-      info: `${this.name}${this.#oldRanval ? "" : "*"}${rv_}`,
+      //jjjj TOCLEANUP
+      // info: `${this.name}${this.#oldRanval ? "" : "*"}${rv_}`,
+      info: `${this.name}${rv_}${
+        this._saveRvTurn_ === 1 ? "" : this._saveRvTurn_
+      }`,
     };
   }
 

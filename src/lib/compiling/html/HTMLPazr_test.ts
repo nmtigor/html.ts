@@ -32,7 +32,7 @@ const init_ = (text_x?: string | string[]) => {
   lexr.reset_Lexr();
   bufr.repl_actr.init(lexr);
 
-  if (text_x) repl(rv(0, 0), text_x);
+  if (text_x !== undefined) repl(rv(0, 0), text_x);
 };
 
 const fina_ = () => {
@@ -53,6 +53,7 @@ after(() => {
   console.log(`g_ran_fac: ${g_ran_fac}`);
   console.log(`g_loc_fac: ${g_loc_fac}`);
 });
+/*64----------------------------------------------------------*/
 
 /* [html5lib-tests/tree-construction/](https://github.com/html5lib/html5lib-tests/tree/master/tree-construction) */
 describe("Tree-construction", () => {
@@ -78,7 +79,7 @@ describe("Tree-construction", () => {
   const test_it = (t_x: Test): void => {
     it(t_x.data.join("\\n"), () => {
       // console.log(t_x);
-      init_(linesOf(t_x.data.join("\n")));
+      init_(t_x.data.join("\n"));
       assertEquals(reprSnErrs_(lexr._pazr_._err_), t_x.sn_errors);
       assertEquals(reprTkErrs_(lexr._err_), t_x.tk_errors ?? []);
       assertEquals(lexr._pazr_._root_?._toHTML_(), t_x.document);

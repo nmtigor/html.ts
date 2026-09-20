@@ -11,5 +11,5 @@ with following settings:
 ```bash
 cd /path_to/html.ts
 # deno 2.7.13
-deno test -R --reporter=dot # 2 passed (8254 steps)
+deno test -R --reporter=dot # 2 passed (8256 steps)
 ```

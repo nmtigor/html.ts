@@ -23,8 +23,12 @@ export abstract class Snt {
   static #ID = 0 as Id_t;
   readonly id = ++Snt.#ID as Id_t;
   /** @final */
+  get class() {
+    return this.constructor.name;
+  }
+  /** @final */
   get class_id() {
-    return `${this.constructor.name}_${this.id}`;
+    return `${this.class}_${this.id}`;
   }
   /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 
@@ -50,10 +54,9 @@ export abstract class Snt {
   get isErr(): boolean {
     return !!this.err_ss$?.length;
   }
+  /** @final */
   hasErrMsg(errMsg_x: ErrMsg): boolean {
-    return !!this.err_ss$?.some((err) =>
-      errMsg_x === (Is.array(err) ? err[0] : err)
-    );
+    return !!this.err_ss$?.some((err) => errMsg_x === err.msg);
   }
   /**
    * @deprecated

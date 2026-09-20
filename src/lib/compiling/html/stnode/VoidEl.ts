@@ -26,8 +26,11 @@ export abstract class VoidEl extends Elment {
    */
   constructor(tagname_x: string, opntagTk_x: HTMLTk) {
     super(tagname_x, opntagTk_x);
+    //jjjj TOCLEANUP
     // opntagTk_x.htmlSn_$ = this;
     this.textCat$ = TextCat.void;
+
+    this.ensureBdries();
   }
 }
 /*80--------------------------------------------------------------------------*/

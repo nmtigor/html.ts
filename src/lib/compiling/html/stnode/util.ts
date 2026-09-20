@@ -5,7 +5,6 @@
 
 import type { int } from "@fe-lib/alias.ts";
 import { assert, fail, space } from "@fe-lib/util.ts";
-import { linesOf } from "@fe-lib/util/string.ts";
 import { DEBUG, INOUT } from "@fe-src/preNs.ts";
 import { HTMLTk } from "../HTMLTk.ts";
 import { HTMLTok } from "../HTMLTok.ts";
@@ -63,18 +62,17 @@ export const apdSnt = (
   //jjjj TOCLEANUP
   // correctSnts_(self_x.snt_a_$);
 
-  let apdEl = false;
   for (const snt of snts_x) {
     self_x.snt_a_$.push(snt);
     if (snt instanceof HTMLTk) {
-      snt.htmlSn_$ = self_x;
+      //jjjj TOCLEANUP
+      // snt.htmlSn_$ = self_x;
     } else {
       snt.attachTo_$(self_x);
-      apdEl = true;
+      self_x.children_$ = undefined;
     }
   }
 
-  if (apdEl) self_x.children_$ = undefined;
   self_x.invalBdries();
 };
 
@@ -94,7 +92,8 @@ export const insSnt = (
 
   self_x.snt_a_$.splice(i_x, 0, snt_x);
   if (snt_x instanceof HTMLTk) {
-    snt_x.htmlSn_$ = self_x;
+    //jjjj TOCLEANUP
+    // snt_x.htmlSn_$ = self_x;
   } else {
     snt_x.attachTo_$(self_x);
     self_x.children_$ = undefined;
@@ -115,10 +114,11 @@ export const rmvSnt = (
   self_x: HTMLCtnr,
   ...snts_x: (HTMLTk | Elment | Proins)[]
 ): void => {
-  let rmvEl = false;
+  if (snts_x.length === 0) return;
+
   if (snts_x === self_x.snt_a_$) {
     self_x.snt_a_$.length = 0;
-    rmvEl = true;
+    self_x.children_$ = undefined;
   } else {
     let j_ = self_x.snt_a_$.length;
     for (let i = snts_x.length; i--;) {
@@ -127,10 +127,11 @@ export const rmvSnt = (
         if (self_x.snt_a_$[j_] === snt_i) {
           self_x.snt_a_$.splice(j_, 1);
           if (snt_i instanceof HTMLTk) {
-            snt_i.htmlSn_$ = undefined;
+            //jjjj TOCLEANUP
+            // snt_i.htmlSn_$ = undefined;
           } else {
             snt_i.detach_$();
-            rmvEl = true;
+            self_x.children_$ = undefined;
           }
           break;
         }
@@ -138,7 +139,6 @@ export const rmvSnt = (
     }
   }
 
-  if (rmvEl) self_x.children_$ = undefined;
   self_x.invalBdries();
   /*#static*/ if (INOUT) {
     assert(
@@ -167,6 +167,7 @@ export const tfrSntTo = (
   self_x.rmvSnt(...snt_a);
   tgtPa_x.apdSnt(...snt_a);
 };
+/*64----------------------------------------------------------*/
 
 /**
  * @headconst @param self_x

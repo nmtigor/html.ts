@@ -13,9 +13,7 @@ export type Cf<T> = (a: T, b: T) => boolean;
 
 //kkkk SortedSet: consider using B-tree, ref. https://youtu.be/K1a2Bk8NrYQ
 /**
- * Completely ordered array without duplicate.
- *
- * primaryconst: const exclude `#sorted`, `#tmp_a`
+ * primaryconst: const exclude `#sorted`, `#tmp_a`, element order
  */
 export class SortedSet<T> extends Array<T> {
   static #ID = 0 as id_t;
@@ -259,7 +257,7 @@ export class SortedSet<T> extends Array<T> {
     }
     return had ? -1 : this.#index;
   }
-  /** @headconst @param vals_x */
+  /** @headborrow @headconst @param vals_x */
   add_O(vals_x?: T[]): this {
     if (vals_x) {
       for (const v of vals_x) this.add(v);

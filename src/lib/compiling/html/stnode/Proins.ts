@@ -7,6 +7,7 @@ import type { uint } from "@fe-lib/alias.ts";
 import { space } from "@fe-lib/util.ts";
 import type { HTMLTk } from "../HTMLTk.ts";
 import type { Proins_LI } from "../util.ts";
+import type { CtnrEl } from "./CtnrEl.ts";
 import { HTMLSn } from "./HTMLSn.ts";
 /*80--------------------------------------------------------------------------*/
 
@@ -23,11 +24,18 @@ export class Proins extends HTMLSn {
   override get lastToken_1() {
     return this.lastTk$ = this.tk;
   }
+  /*49|||||||||||||||||||||||||||||||||||||||||||*/
+
+  //jjjj TOCLEANUP
+  // /** against to  "targetParent" */
+  // srcPa?: CtnrEl | undefined;
 
   /** @const @param tk_x */
   constructor(tk_x: HTMLTk) {
     super();
     this.tk = tk_x;
+
+    this.ensureBdries();
   }
   /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 

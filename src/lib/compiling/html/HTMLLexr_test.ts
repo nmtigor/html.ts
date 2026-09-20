@@ -8,7 +8,7 @@ import { g_count } from "@fe-lib/util/performance.ts";
 import { assertEquals } from "@std/assert";
 import { after, afterEach, describe, it } from "@std/testing/bdd";
 import type { TestO } from "../_test.ts";
-import { repl, rv, test_o } from "../_test.ts";
+import { ran, repl, rv, test_o } from "../_test.ts";
 import { Bufr } from "../Bufr.ts";
 import { g_loc_fac } from "../Loc.ts";
 import { g_ran_fac } from "../RanFac.ts";
@@ -16,11 +16,13 @@ import type { ErrRepr, TokenRepr } from "./alias.ts";
 import { State } from "./alias.ts";
 import { HTMLLexr } from "./HTMLLexr.ts";
 import { _sortErrs_ } from "./util.ts";
+import { Stnode } from "../Stnode.ts";
 /*80--------------------------------------------------------------------------*/
 
 const bufr = new Bufr();
 const lexr = HTMLLexr.create(bufr);
 Object.assign(test_o, { bufr, lexr } as Partial<TestO>);
+Stnode.FilterDepth = 100;
 
 /**
  * @const @param text_x
@@ -37,7 +39,7 @@ const init_ = (
   lexr.lastTagname_$ = lastTagname_x;
   bufr.repl_actr.init(lexr);
 
-  if (text_x) repl(rv(0, 0), text_x);
+  if (text_x !== undefined) repl(rv(0, 0), text_x);
 };
 
 const fina_ = () => {
@@ -60,6 +62,11 @@ after(() => {
   console.log(`g_loc_fac: ${g_loc_fac}`);
 });
 
+/** @const @param ers_x */
+const reprErrs_ = (ers_x: ErrRepr[]): ErrRepr[] =>
+  _sortErrs_(ers_x).map((er_y) => (delete er_y.ts, er_y));
+/*64----------------------------------------------------------*/
+
 /* [html5lib-tests/tokenizer/](https://github.com/html5lib/html5lib-tests/tree/master/tokenizer) */
 describe("Tokenizer", () => {
   type Test = {
@@ -72,11 +79,6 @@ describe("Tokenizer", () => {
     errors?: ErrRepr[];
   };
   type Tests = { tests: Test[] };
-
-  /** @const @param ers_x */
-  const reprTkErrs_ = (ers_x: ErrRepr[]): ErrRepr[] =>
-    _sortErrs_(ers_x)
-      .map((er_y) => (delete er_y.ts, er_y));
 
   /**
    * @const @param t_x
@@ -103,7 +105,7 @@ describe("Tokenizer", () => {
       init_(t_x.input, is_x, t_x.lastStartTag);
       assertEquals(lexr._repr_, t_x.output);
       if (t_x.errors?.length) {
-        assertEquals(reprTkErrs_(lexr._err_), t_x.errors);
+        assertEquals(reprErrs_(lexr._err_), t_x.errors);
       }
     });
   };
@@ -143,5 +145,37 @@ describe("Tokenizer", () => {
       }
     });
   }
+});
+/*64----------------------------------------------------------*/
+
+describe("Compiling in body", () => {
+  it("Start p-like tag", () => {
+    init_("<!DOCTYPE html><p>abc");
+    assertEquals(lexr.isErr, false);
+    assertEquals(lexr._pazr_.isErr, false);
+    assertEquals(lexr._pazr_._root_?._toHTML_(), [
+      "| <!DOCTYPE html>",
+      "| <html>",
+      "|   <head>",
+      "|   <body>",
+      "|     <p>",
+      '|       "abc"',
+    ]);
+
+    repl(ran(0).rv, "d");
+    /*
+    <!DOCTYPE html><p>abcd
+    */
+    assertEquals(lexr.isErr, false);
+    assertEquals(lexr._pazr_.isErr, false);
+    assertEquals(lexr._pazr_._root_?._toHTML_(), [
+      "| <!DOCTYPE html>",
+      "| <html>",
+      "|   <head>",
+      "|   <body>",
+      "|     <p>",
+      '|       "abcd"',
+    ]);
+  });
 });
 /*80--------------------------------------------------------------------------*/

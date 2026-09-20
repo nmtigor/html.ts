@@ -56,8 +56,9 @@ export enum TextCat {
   raw_text,
   escapable_raw_text,
   foreign,
-  /** foreign and void */
-  forvoid,
+  //jjjj TOCLEANUP
+  // /** foreign and void */
+  // forvoid,
 }
 
 /** [3.2.4.2 The stack of open elements](https://html.spec.whatwg.org/multipage/parsing.html#the-stack-of-open-elements) */

@@ -11,9 +11,9 @@ import type { HTMLTk } from "../HTMLTk.ts";
 import type { Tag_LI } from "../util.ts";
 import { AttrRans } from "../util.ts";
 import type { HTMLCtnr } from "./alias.ts";
-import { _toHTML_ } from "./util.ts";
 import { CtnrEl } from "./CtnrEl.ts";
 import { HTMLSn } from "./HTMLSn.ts";
+import { _toHTML_ } from "./util.ts";
 /*80--------------------------------------------------------------------------*/
 
 export abstract class Elment extends HTMLSn {
@@ -41,6 +41,11 @@ export abstract class Elment extends HTMLSn {
     assert(valve, `Loop ${VALVE}(±1) times!`);
     return false;
   }
+
+  declare protected frstTk$: HTMLTk | undefined;
+  abstract override get frstToken_1(): HTMLTk;
+  declare protected lastTk$: HTMLTk | undefined;
+  abstract override get lastToken_1(): HTMLTk;
   /*49|||||||||||||||||||||||||||||||||||||||||||*/
 
   readonly tagname;
@@ -66,16 +71,15 @@ export abstract class Elment extends HTMLSn {
   //   return (this.#opntag?.lexdInfo as Tag_LI | undefined)?.selfCloz ?? true;
   // }
 
-  declare protected frstTk$: HTMLTk | undefined;
-  abstract override get frstToken_1(): HTMLTk;
-  declare protected lastTk$: HTMLTk | undefined;
-  abstract override get lastToken_1(): HTMLTk;
-
   /**
    * @using All using `Ran`s are from `HTMLTk`s, which are responsible for
    *    `rev()`.
    */
   attrs_$;
+
+  //jjjj TOCLEANUP
+  // /** against to  "targetParent" */
+  // srcPa?: CtnrEl | undefined;
 
   /**
    * @const @param tagname_x

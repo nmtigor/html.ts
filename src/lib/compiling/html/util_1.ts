@@ -9,7 +9,7 @@ import type { HTMLTk } from "./HTMLTk.ts";
 import { HTMLTok } from "./HTMLTok.ts";
 import { Colgroup_El } from "./stnode/Colgroup_El.ts";
 import { Unknown_El } from "./stnode/CtnrEl.ts";
-import { Elment } from "./stnode/Elment.ts";
+import type { Elment } from "./stnode/Elment.ts";
 import {
   A_SVG,
   Abbr_El,
@@ -337,7 +337,7 @@ export const createEl_tk = (tk_x: HTMLTk): Elment => {
       case "var": return new Var_El(tk_x);
       case "video": return new Video_El(tk_x);
       
-      /* 2 OrdinaryForeignEl (void) */
+      /* 2 OrdinaryForeignEl ("void") */
       case "svg animate": return new Animate_SVG(tk_x);
       case "svg animatemotion": return new AnimateMotion_SVG(tk_x);
       case "svg animatetransform": return new AnimateTransform_SVG(tk_x);

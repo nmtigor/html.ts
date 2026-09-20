@@ -13,6 +13,10 @@ import { CtnrEl } from "./CtnrEl.ts";
 /*80--------------------------------------------------------------------------*/
 
 export class FmtingEl extends CtnrEl {
+  //jjjj TOCLEANUP
+  // proto?: FmtingEl | undefined;
+  clone?: FmtingEl | undefined;
+
   /**
    * @const @param tagname_x
    * @const @param tk_x
@@ -30,8 +34,8 @@ export class FmtingEl extends CtnrEl {
    * @const @param _x
    * @const @param phTk_x
    */
-  static create(_x: string | HTMLTk | FmtingEl, phTk_x?: HTMLTk): FmtingEl {
-    let tk_ = Is.string(_x) || _x instanceof FmtingEl ? undefined : _x;
+  static create(_x: HTMLTk | FmtingEl, phTk_x?: HTMLTk): FmtingEl {
+    let tk_ = _x instanceof FmtingEl ? undefined : _x;
     /*#static*/ if (INOUT) {
       assert(!tk_ || tk_.isOpntag);
     }
@@ -39,7 +43,7 @@ export class FmtingEl extends CtnrEl {
     if (tk_) {
       tn_ = (tk_.lexdInfo as Tag_LI).tagname_s;
     } else {
-      tn_ = Is.string(_x) ? _x : (_x as FmtingEl).tagname;
+      tn_ = (_x as FmtingEl).tagname;
       tk_ = phTk_x!;
     }
 
@@ -58,6 +62,9 @@ export class FmtingEl extends CtnrEl {
     if (ret) {
       if (_x instanceof FmtingEl) {
         ret.attrs_$ = _x.attrs_$; //!
+        //jjjj TOCLEANUP
+        // ret.proto = _x;
+        _x.clone = ret;
       }
       return ret;
     }

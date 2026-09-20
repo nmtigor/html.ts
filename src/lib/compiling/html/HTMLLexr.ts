@@ -138,7 +138,7 @@ export class HTMLLexr extends Lexr<HTMLTok> {
   private constructor(bufr_x: Bufr) {
     super(bufr_x);
     this.concatBdry$ = false;
-    this.concatInnr$ = true;
+    this.concatInnr$ = false;
   }
   /**
    * @headconst @param bufr_x
@@ -164,6 +164,10 @@ export class HTMLLexr extends Lexr<HTMLTok> {
     return this;
   }
   /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
+
+  protected override sufLexmrk$(_oldRan_a_x?: Ran[]): void {
+    this.#pazr.pazPremrk_$().pazMrk_$();
+  }
 
   protected override linkNextTk$(prevTk_x: HTMLTk, scandTk_x: HTMLTk): HTMLTk {
     const retTk = super.linkNextTk$(prevTk_x, scandTk_x) as HTMLTk;

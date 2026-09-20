@@ -22,7 +22,7 @@ import {
 } from "./util.ts";
 /*80--------------------------------------------------------------------------*/
 
-/** non-`TextCat.void` and non-`TextCat.forvoid` Elment */
+/** non-`TextCat.void` Elment */
 export abstract class CtnrEl extends Elment {
   readonly snt_a_$: (HTMLTk | Elment | Proins)[] = [];
 
@@ -39,6 +39,14 @@ export abstract class CtnrEl extends Elment {
   get lastToken_1() {
     return this.lastTk$ ??= lastToken_1(this);
   }
+  /*49|||||||||||||||||||||||||||||||||||||||||||*/
+
+  //jjjj TOCLEANUP
+  // #abdSnts?: (Elment | Proins | HTMLTk)[];
+  // /** abandoned Elment's, Proins's or HTMLTk's */
+  // get abdSnts() {
+  //   return this.#abdSnts ??= [];
+  // }
 
   /**
    * @const @param tagname_x
@@ -47,11 +55,14 @@ export abstract class CtnrEl extends Elment {
   constructor(tagname_x: string, tk_x: HTMLTk) {
     super(tagname_x, tk_x.value === HTMLTok.tag ? tk_x : undefined);
     this.snt_a_$.push(tk_x);
-    tk_x.htmlSn_$ = this;
+    //jjjj TOCLEANUP
+    // tk_x.htmlSn_$ = this;
 
     if (this.ns === TagNS.HTML && tk_x.selfCloz && !tk_x.isErr) {
       tk_x.setErr({ msg: ErrMsg.html_tag_void_trail_solidus });
     }
+
+    this.ensureBdries();
   }
   /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 

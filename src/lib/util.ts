@@ -1,7 +1,7 @@
 /** 80**************************************************************************
  * This module is loaded with top priority!
  *
- * lib/util: mass vs. lib/util/general: niche
+ * lib/util: mass vs lib/util/general: niche
  *
  * @module lib/util
  * @license MIT

@@ -3,8 +3,8 @@
  * @license MIT
  ******************************************************************************/
 
-import { DEBUG, INOUT } from "@fe-src/preNs.ts";
-import { assert, fail } from "../../util.ts";
+import { DEBUG } from "@fe-src/preNs.ts";
+import { fail } from "../../util.ts";
 import { isASCIIWs } from "../../util/string.ts";
 import { BaseTok } from "../BaseTok.ts";
 import { Ran } from "../Ran.ts";
@@ -15,10 +15,7 @@ import { SortedErr } from "../util.ts";
 import type { ErrRepr, TokenRepr } from "./alias.ts";
 import type { HTMLLexr } from "./HTMLLexr.ts";
 import { HTMLTok } from "./HTMLTok.ts";
-import { HTMLCtnr } from "./stnode/alias.ts";
-import { CtnrEl } from "./stnode/CtnrEl.ts";
-import { Doment } from "./stnode/Doment.ts";
-import type { HTMLSn } from "./stnode/HTMLSn.ts";
+import type { CtnrEl } from "./stnode/CtnrEl.ts";
 import type { Comment_LI, Doctype_LI, Proins_LI } from "./util.ts";
 import {
   _reprErr_,
@@ -31,8 +28,9 @@ import {
 
 /** @final */
 export class HTMLTk extends Token<HTMLTok> {
-  /** For `removeSelf()` */
-  htmlSn_$: HTMLSn | undefined;
+  //jjjj TOCLEANUP
+  // /** For `removeSelf()` */
+  // htmlSn_$: HTMLSn | undefined;
 
   override get isErr(): boolean {
     if (
@@ -96,6 +94,11 @@ export class HTMLTk extends Token<HTMLTok> {
       _x.host_$ = this;
     }
   }
+  /*49|||||||||||||||||||||||||||||||||||||||||||*/
+
+  //jjjj TOCLEANUP
+  // /** against to  "targetParent" */
+  // srcPa?: CtnrEl | undefined;
 
   constructor(
     lexr_x: HTMLLexr,
@@ -116,16 +119,18 @@ export class HTMLTk extends Token<HTMLTok> {
   }
   /*64||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*/
 
-  override removeSelf(pn_x?: "prev" | "next"): HTMLTk | undefined {
-    /*#static*/ if (INOUT) {
-      assert(
-        this.htmlSn_$ instanceof CtnrEl || this.htmlSn_$ instanceof Doment,
-      );
-    }
-    (this.htmlSn_$ as HTMLCtnr).rmvSnt(this);
+  /*jjjj TOCLEANUP used only in `Lexr.concatTokens$()` which is overridden by
+  `HTMLLexr.concatTokens$()` which has no-ops. */
+  // override removeSelf(pn_x?: "prev" | "next"): HTMLTk | undefined {
+  //   /*#static*/ if (INOUT) {
+  //     assert(
+  //       this.htmlSn_$ instanceof CtnrEl || this.htmlSn_$ instanceof Doment,
+  //     );
+  //   }
+  //   (this.htmlSn_$ as HTMLCtnr).rmvSnt(this);
 
-    return super.removeSelf(pn_x) as HTMLTk | undefined;
-  }
+  //   return super.removeSelf(pn_x) as HTMLTk | undefined;
+  // }
   /*49|||||||||||||||||||||||||||||||||||||||||||*/
 
   get isChar(): boolean {

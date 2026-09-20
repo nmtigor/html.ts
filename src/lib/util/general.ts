@@ -1,5 +1,5 @@
 /** 80**************************************************************************
- * lib/util: mass vs. lib/util/general: niche/standalone
+ * lib/util: mass vs lib/util/general: niche/standalone
  *
  * @module lib/util/general
  * @license MIT

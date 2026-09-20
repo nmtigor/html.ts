@@ -912,7 +912,7 @@ ReadableStream.prototype[Symbol.asyncIterator] ??= async function* (this) {
   using reader = this.getReader();
   while (true) {
     const { value, done } = await reader.read();
-    if (done) return;
+    if (done) return undefined;
     yield value;
   }
 };
