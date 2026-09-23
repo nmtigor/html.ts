@@ -1,3 +1,7 @@
+Archive this repository because this is part of [cimpiling.ts](https://github.com/nmtigor/compiling.ts/tree/main/src/lib/compiling/html).
+
+---
+
 This program implements
 [HTML Living Standard (2026-09-08) 13.2 Parsing HTML documents](https://html.spec.whatwg.org/multipage/parsing.html)
 with following settings:
